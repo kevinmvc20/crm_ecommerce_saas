@@ -1,0 +1,543 @@
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║           TENANT LIST — Gestión de Empresas SaaS               ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+
+<!-- ── Contenedor raíz con respiración corporativa ── -->
+<div class="max-w-7xl mx-auto px-8 py-6 space-y-6">
+
+  <!-- ── CABECERA DE SECCIÓN ── -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+        Empresas &amp; Clientes SaaS
+      </h1>
+      <p class="mt-1 max-w-xl text-sm text-slate-500">
+        Administra las organizaciones cliente registradas en la plataforma. Cada empresa
+        dispone de su subdominio, plan y estado de suscripción independiente.
+      </p>
+    </div>
+
+    <!-- Botón principal — único punto de acción de alta -->
+    <button
+      id="btn-nueva-empresa"
+      type="button"
+      class="inline-flex shrink-0 items-center gap-2 rounded-lg
+             bg-brand-primary px-4 py-2.5
+             text-sm font-medium text-white
+             shadow-sm
+             transition-opacity duration-150 hover:opacity-90
+             focus-visible:outline focus-visible:outline-2
+             focus-visible:outline-offset-2 focus-visible:outline-brand-primary
+             active:scale-95"
+      (click)="abrirModal()"
+      aria-label="Crear nueva empresa">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+           stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+      </svg>
+      Nueva Empresa
+    </button>
+  </div>
+
+  <!-- ── MENSAJE DE ERROR GLOBAL ── -->
+  @if (errorMessage()) {
+    <div
+      role="alert"
+      class="flex items-start gap-3 rounded-xl border border-red-200
+             bg-red-50 px-4 py-3 text-sm text-red-700">
+      <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
+           stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════
+       CARD DE LA TABLA CORPORATIVA
+       ══════════════════════════════════════════════════ -->
+  <section
+    aria-labelledby="tabla-empresas-titulo"
+    class="border border-slate-200/80 rounded-xl bg-white shadow-sm overflow-hidden">
+
+    <!-- Cabecera de la card -->
+    <div class="border-b border-slate-100 px-5 py-4">
+      <h2 id="tabla-empresas-titulo"
+          class="text-sm font-semibold text-slate-700">
+        Empresas registradas
+      </h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-100"
+             aria-label="Lista de empresas SaaS">
+
+        <!-- ── Cabecera de tabla ── -->
+        <thead class="bg-slate-50/75">
+          <tr>
+            <th scope="col"
+                class="py-3 pl-5 pr-3 text-left text-xs font-semibold
+                       uppercase tracking-wider text-slate-500">
+              Empresa
+            </th>
+            <th scope="col"
+                class="px-3 py-3 text-left text-xs font-semibold
+                       uppercase tracking-wider text-slate-500">
+              Subdominio
+            </th>
+            <th scope="col"
+                class="px-3 py-3 text-left text-xs font-semibold
+                       uppercase tracking-wider text-slate-500">
+              Plan asignado
+            </th>
+            <th scope="col"
+                class="px-3 py-3 text-left text-xs font-semibold
+                       uppercase tracking-wider text-slate-500">
+              Estado
+            </th>
+            <th scope="col"
+                class="px-3 py-3 text-left text-xs font-semibold
+                       uppercase tracking-wider text-slate-500">
+              Activo
+            </th>
+            <th scope="col" class="relative py-3 pl-3 pr-5">
+              <span class="sr-only">Acciones</span>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100 bg-white">
+
+          <!-- ── SKELETON LOADER ── -->
+          @if (isLoading()) {
+            @for (row of [1, 2, 3]; track row) {
+              <tr class="animate-pulse">
+                <td class="py-4 pl-5 pr-3">
+                  <div class="flex items-center gap-3">
+                    <div class="h-9 w-9 rounded-xl bg-slate-200"></div>
+                    <div class="space-y-1.5">
+                      <div class="h-3 w-32 rounded bg-slate-200"></div>
+                      <div class="h-2.5 w-20 rounded bg-slate-100"></div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-4">
+                  <div class="h-6 w-40 rounded-full bg-slate-200"></div>
+                </td>
+                <td class="px-3 py-4">
+                  <div class="h-3 w-24 rounded bg-slate-200"></div>
+                </td>
+                <td class="px-3 py-4">
+                  <div class="h-6 w-20 rounded-full bg-slate-200"></div>
+                </td>
+                <td class="px-3 py-4">
+                  <div class="h-5 w-5 rounded-full bg-slate-200"></div>
+                </td>
+                <td class="pl-3 pr-5 py-4">
+                  <div class="h-6 w-14 rounded bg-slate-200"></div>
+                </td>
+              </tr>
+            }
+          }
+
+          <!-- ── FILAS DE DATOS ── -->
+          @if (!isLoading()) {
+            @for (tenant of tenants(); track tenant.id) {
+              <tr class="group transition-colors duration-100 hover:bg-slate-50">
+
+                <!-- Empresa — avatar inicial + nombre -->
+                <td class="whitespace-nowrap py-4 pl-5 pr-3">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center
+                                rounded-xl bg-gradient-to-br from-brand-primary to-blue-600
+                                text-sm font-bold text-white shadow-sm">
+                      {{ tenant.nombreComercial[0].toUpperCase() }}
+                    </div>
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-semibold text-slate-900">
+                        {{ tenant.nombreComercial }}
+                      </p>
+                      <p class="truncate text-xs text-slate-400">ID: {{ tenant.id }}</p>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Subdominio — badge tipo URL -->
+                <td class="whitespace-nowrap px-3 py-4">
+                  <span class="inline-flex items-center gap-1 rounded-full
+                               bg-slate-100 px-3 py-1 text-xs font-mono
+                               font-medium text-slate-700 ring-1 ring-slate-200">
+                    <svg class="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"/>
+                    </svg>
+                    {{ tenant.subdominio }}.saas.com
+                  </span>
+                </td>
+
+                <!-- Plan -->
+                <td class="whitespace-nowrap px-3 py-4">
+                  <span class="text-sm font-medium text-slate-700">
+                    {{ tenant.planNombre }}
+                  </span>
+                </td>
+
+                <!-- Estado — badge con color dinámico -->
+                <td class="whitespace-nowrap px-3 py-4">
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5
+                           text-xs font-semibold ring-1"
+                    [ngClass]="estadoBadgeClass(tenant.estadoSuscripcion)"
+                    [attr.aria-label]="'Estado: ' + tenant.estadoSuscripcion">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-current"
+                          aria-hidden="true"></span>
+                    {{ tenant.estadoSuscripcion }}
+                  </span>
+                </td>
+
+                <!-- Activo — icono visual -->
+                <td class="whitespace-nowrap px-3 py-4">
+                  @if (tenant.activo) {
+                    <span class="inline-flex h-6 w-6 items-center justify-center
+                                 rounded-full bg-emerald-100"
+                          aria-label="Empresa activa">
+                      <svg class="h-3.5 w-3.5 text-emerald-600" fill="none"
+                           viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"
+                           aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M4.5 12.75l6 6 9-13.5"/>
+                      </svg>
+                    </span>
+                  } @else {
+                    <span class="inline-flex h-6 w-6 items-center justify-center
+                                 rounded-full bg-slate-100"
+                          aria-label="Empresa inactiva">
+                      <svg class="h-3.5 w-3.5 text-slate-400" fill="none"
+                           viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"
+                           aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </span>
+                  }
+                </td>
+
+                <!-- Acciones -->
+                <td class="whitespace-nowrap pl-3 pr-5 py-4 text-right">
+                  <button
+                    type="button"
+                    class="rounded-lg px-3 py-1.5 text-xs font-medium
+                           text-slate-500 ring-1 ring-slate-200
+                           transition-all duration-150
+                           hover:bg-slate-50 hover:text-slate-800
+                           focus-visible:outline focus-visible:outline-2
+                           focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                    [attr.aria-label]="'Ver detalles de ' + tenant.nombreComercial">
+                    Ver detalles
+                  </button>
+                </td>
+              </tr>
+            }
+
+            <!-- ── ESTADO VACÍO ── -->
+            @if (tenants().length === 0) {
+              <tr>
+                <td colspan="6" class="py-16 text-center">
+                  <div class="mx-auto max-w-sm">
+                    <!-- Icono ilustrativo -->
+                    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center
+                                rounded-2xl bg-slate-100">
+                      <svg class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24"
+                           stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/>
+                      </svg>
+                    </div>
+                    <p class="text-base font-semibold text-slate-700">
+                      Sin empresas registradas
+                    </p>
+                    <p class="mt-1 text-sm text-slate-400">
+                      Aún no hay clientes en la plataforma. Crea la primera empresa
+                      haciendo clic en "Nueva Empresa".
+                    </p>
+                    <!-- Acción secundaria tipo texto — sin duplicar el botón primario -->
+                    <button
+                      type="button"
+                      class="mt-4 text-sm font-medium text-brand-primary
+                             hover:underline focus-visible:outline-none
+                             focus-visible:underline"
+                      (click)="abrirModal()">
+                      + Registrar primera empresa
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer de la card -->
+    @if (!isLoading() && tenants().length > 0) {
+      <div class="border-t border-slate-100 px-5 py-3">
+        <p class="text-xs text-slate-400">
+          {{ tenants().length }} empresa{{ tenants().length !== 1 ? 's' : '' }}
+          registrada{{ tenants().length !== 1 ? 's' : '' }}
+        </p>
+      </div>
+    }
+  </section>
+
+</div><!-- /contenedor raíz -->
+
+
+<!-- ════════════════════════════════════════════════════════════
+     MODAL — Crear nueva empresa
+     ════════════════════════════════════════════════════════════ -->
+@if (isModalOpen()) {
+  <!-- Backdrop -->
+  <div
+    id="modal-backdrop"
+    class="fixed inset-0 z-50 flex items-center justify-center
+           bg-slate-900/50 backdrop-blur-sm p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-titulo"
+    (click)="cerrarModal()">
+
+    <!-- Tarjeta del modal -->
+    <div
+      id="modal-card"
+      class="relative w-full max-w-lg overflow-hidden rounded-2xl
+             bg-white shadow-2xl ring-1 ring-slate-200"
+      (click)="$event.stopPropagation()">
+
+      <!-- ── Cabecera ── -->
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div>
+          <h2 id="modal-titulo" class="text-base font-semibold text-slate-900">
+            Registrar nueva empresa
+          </h2>
+          <p class="mt-0.5 text-xs text-slate-400">
+            Todos los campos son obligatorios
+          </p>
+        </div>
+        <button
+          id="btn-cerrar-modal"
+          type="button"
+          class="flex h-8 w-8 items-center justify-center rounded-lg
+                 text-slate-400 transition-colors
+                 hover:bg-slate-100 hover:text-slate-600
+                 focus-visible:outline focus-visible:outline-2
+                 focus-visible:outline-offset-1 focus-visible:outline-brand-primary"
+          (click)="cerrarModal()"
+          aria-label="Cerrar modal">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ── Formulario ── -->
+      <form
+        id="form-nueva-empresa"
+        [formGroup]="tenantForm"
+        (ngSubmit)="onSubmit()"
+        class="space-y-5 px-6 py-5"
+        novalidate>
+
+        <!-- Error de envío dentro del modal -->
+        @if (errorMessage() && !isLoading()) {
+          <div role="alert"
+               class="flex items-start gap-2.5 rounded-xl border border-red-200
+                      bg-red-50 px-3.5 py-3 text-xs text-red-700">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <!-- Nombre comercial -->
+        <div>
+          <label for="input-nombre-comercial"
+                 class="block text-sm font-medium text-slate-700">
+            Nombre comercial
+          </label>
+          <input
+            id="input-nombre-comercial"
+            type="text"
+            formControlName="nombreComercial"
+            placeholder="Ej: Acme Corp, Innovatech S.A."
+            autocomplete="organization"
+            class="mt-1.5 block w-full rounded-xl border border-slate-200
+                   bg-white px-3.5 py-2.5 text-sm text-slate-900
+                   shadow-sm placeholder:text-slate-400
+                   transition-all duration-150
+                   hover:border-slate-300
+                   focus:border-brand-primary focus:outline-none focus:ring-2
+                   focus:ring-brand-primary/20"
+            [class.border-red-400]="hasError('nombreComercial', 'required') || hasError('nombreComercial', 'minlength')"
+            [attr.aria-invalid]="hasError('nombreComercial', 'required') || hasError('nombreComercial', 'minlength')"
+            aria-describedby="error-nombre-comercial"/>
+
+          @if (hasError('nombreComercial', 'required')) {
+            <p id="error-nombre-comercial" role="alert"
+               class="mt-1 text-xs text-red-600">
+              El nombre comercial es obligatorio.
+            </p>
+          } @else if (hasError('nombreComercial', 'minlength')) {
+            <p id="error-nombre-comercial" role="alert"
+               class="mt-1 text-xs text-red-600">
+              Mínimo 2 caracteres.
+            </p>
+          }
+        </div>
+
+        <!-- Subdominio -->
+        <div>
+          <label for="input-subdominio"
+                 class="block text-sm font-medium text-slate-700">
+            Subdominio
+          </label>
+          <div class="mt-1.5 flex overflow-hidden rounded-xl
+                      border border-slate-200 shadow-sm
+                      focus-within:border-brand-primary focus-within:ring-2
+                      focus-within:ring-brand-primary/20
+                      transition-all duration-150"
+               [class.border-red-400]="hasError('subdominio', 'required') || hasError('subdominio', 'pattern')">
+            <input
+              id="input-subdominio"
+              type="text"
+              formControlName="subdominio"
+              placeholder="mi-empresa"
+              autocomplete="off"
+              class="min-w-0 flex-1 bg-white px-3.5 py-2.5 text-sm text-slate-900
+                     placeholder:text-slate-400 focus:outline-none"
+              [attr.aria-invalid]="hasError('subdominio', 'required') || hasError('subdominio', 'pattern')"
+              aria-describedby="hint-subdominio error-subdominio"/>
+            <span class="flex items-center bg-slate-50 px-3 text-xs
+                         font-medium text-slate-400 border-l border-slate-200">
+              .saas.com
+            </span>
+          </div>
+          <p id="hint-subdominio" class="mt-1 text-xs text-slate-400">
+            Solo minúsculas, números y guiones. Sin espacios ni caracteres especiales.
+          </p>
+
+          @if (hasError('subdominio', 'required')) {
+            <p id="error-subdominio" role="alert" class="mt-1 text-xs text-red-600">
+              El subdominio es obligatorio.
+            </p>
+          } @else if (hasError('subdominio', 'pattern')) {
+            <p id="error-subdominio" role="alert" class="mt-1 text-xs text-red-600">
+              Solo letras minúsculas (a-z), números (0-9) y guiones (-)
+              sin comenzar ni terminar con un guion.
+            </p>
+          }
+        </div>
+
+        <!-- Plan SaaS -->
+        <div>
+          <label for="select-plan"
+                 class="block text-sm font-medium text-slate-700">
+            Plan SaaS
+          </label>
+          <select
+            id="select-plan"
+            formControlName="planSaaSId"
+            class="mt-1.5 block w-full appearance-none rounded-xl border border-slate-200
+                   bg-white px-3.5 py-2.5 text-sm text-slate-900
+                   shadow-sm transition-all duration-150
+                   hover:border-slate-300
+                   focus:border-brand-primary focus:outline-none focus:ring-2
+                   focus:ring-brand-primary/20"
+            [class.border-red-400]="hasError('planSaaSId', 'required')"
+            [attr.aria-invalid]="hasError('planSaaSId', 'required')"
+            aria-describedby="error-plan">
+
+            <option [ngValue]="null" disabled>— Selecciona un plan —</option>
+            @for (plan of planes(); track plan.id) {
+              <option [ngValue]="plan.id">
+                {{ plan.nombre }}
+                · ${{ plan.precioMensual }}/mes
+                · hasta {{ plan.limiteUsuarios }} usuarios
+              </option>
+            }
+          </select>
+
+          @if (hasError('planSaaSId', 'required')) {
+            <p id="error-plan" role="alert" class="mt-1 text-xs text-red-600">
+              Debes seleccionar un plan.
+            </p>
+          }
+
+          @if (planes().length === 0 && !isLoading()) {
+            <p class="mt-1 text-xs text-amber-600">
+              ⚠ No hay planes disponibles. Verifica la conexión con el servidor.
+            </p>
+          }
+        </div>
+
+      </form>
+
+      <!-- ── Footer del modal ── -->
+      <div class="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+        <button
+          id="btn-cancelar"
+          type="button"
+          class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm
+                 font-medium text-slate-600 transition-all duration-150
+                 hover:bg-slate-50 hover:text-slate-800
+                 focus-visible:outline focus-visible:outline-2
+                 focus-visible:outline-offset-2 focus-visible:outline-brand-primary
+                 disabled:cursor-not-allowed disabled:opacity-50"
+          (click)="cerrarModal()"
+          [disabled]="isSubmitting()">
+          Cancelar
+        </button>
+
+        <button
+          id="btn-guardar-empresa"
+          type="submit"
+          form="form-nueva-empresa"
+          class="inline-flex items-center gap-2 rounded-xl bg-brand-primary
+                 px-4 py-2.5 text-sm font-semibold text-white shadow-sm
+                 transition-opacity duration-150 hover:opacity-90
+                 focus-visible:outline focus-visible:outline-2
+                 focus-visible:outline-offset-2 focus-visible:outline-brand-primary
+                 active:scale-95
+                 disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="isSubmitting()"
+          [attr.aria-busy]="isSubmitting()">
+
+          @if (isSubmitting()) {
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"
+                 aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10"
+                      stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            Guardando…
+          } @else {
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Guardar Empresa
+          }
+        </button>
+      </div>
+
+    </div><!-- /modal-card -->
+  </div><!-- /backdrop -->
+}

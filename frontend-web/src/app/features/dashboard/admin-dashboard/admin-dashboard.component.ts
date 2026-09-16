@@ -65,49 +65,12 @@ export class AdminDashboardComponent {
   // ──────────────────────────────────────────────────────
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard',        route: '/admin/dashboard', icon: 'dashboard' },
-    { label: 'CRM & Clientes',   route: '/admin/crm',       icon: 'crm'       },
+    { label: 'Empresas SaaS',    route: '/admin/tenants',   icon: 'crm'       },
     { label: 'Catálogo & Stock', route: '/admin/catalog',   icon: 'catalog'   },
     { label: 'Ventas & Pedidos', route: '/admin/orders',    icon: 'orders'    },
     { label: 'Configuración',    route: '/admin/settings',  icon: 'settings'  },
   ];
 
-  // ──────────────────────────────────────────────────────
-  // KPIs de ejemplo (MVP)
-  // ──────────────────────────────────────────────────────
-  protected readonly kpis = [
-    {
-      title: 'Clientes Totales',
-      value: '1,248',
-      change: '+12%',
-      positive: true,
-      icon: 'users',
-      color: 'from-blue-500 to-blue-600',
-    },
-    {
-      title: 'Pedidos Hoy',
-      value: '34',
-      change: '+5',
-      positive: true,
-      icon: 'shopping-bag',
-      color: 'from-violet-500 to-violet-600',
-    },
-    {
-      title: 'Ingresos del Mes',
-      value: '$28,490',
-      change: '+8.3%',
-      positive: true,
-      icon: 'currency',
-      color: 'from-emerald-500 to-emerald-600',
-    },
-    {
-      title: 'Suscripción SaaS',
-      value: 'Activa',
-      change: 'Pro Plan',
-      positive: true,
-      icon: 'shield',
-      color: 'from-amber-500 to-orange-500',
-    },
-  ];
 
   // ──────────────────────────────────────────────────────
   // Acciones
