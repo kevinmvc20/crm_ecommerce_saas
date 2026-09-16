@@ -8,6 +8,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Entidad JPA que mapea la tabla {@code tenant} (empresa inquilina).
+ * Contiene la relación hacia {@link PlanSaaS} a través de la columna {@code plan_saas_id}.
+ */
 @Entity
 @Table(name = "tenant")
 @Getter
@@ -20,6 +24,10 @@ public class Tenant {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_saas_id", nullable = false)
+    private PlanSaaS planSaaS;
+
     @Column(name = "nombre_comercial", nullable = false, length = 150)
     private String nombreComercial;
 
@@ -29,9 +37,18 @@ public class Tenant {
     @Column(name = "estado_suscripcion", nullable = false, length = 50)
     private String estadoSuscripcion;
 
+    @Column(name = "fecha_vencimiento_plan")
+    private LocalDateTime fechaVencimientoPlan;
+
     @Column(name = "activo", nullable = false)
     private Boolean activo;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    /** Inicializa {@code createdAt} automáticamente antes de la primera persistencia. */
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 }
