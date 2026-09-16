@@ -1,0 +1,26 @@
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Java / Spring Boot
+backend-core/target/
+backend-core/.mvn/
+backend-core/mvnw
+backend-core/mvnw.cmd
+
+# Python / FastAPI
+backend-analytics/__pycache__/
+backend-analytics/*.pyc
+backend-analytics/venv/
+backend-analytics/.env
+
+# Frontend / Angular
+frontend-web/node_modules/
+frontend-web/dist/
+frontend-web/.angular/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
