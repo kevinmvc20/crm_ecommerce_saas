@@ -6,6 +6,7 @@ import { AuthResponse, LoginRequest, UserSession } from '../models/auth.models';
 
 const API_URL = 'http://localhost:8080/api/v1/auth';
 const TOKEN_KEY = 'auth_token';
+const SESSION_KEY = 'user_session';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -51,6 +52,7 @@ export class AuthService {
    */
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(SESSION_KEY);
     this._token.set(null);
     this._currentUser.set(null);
     this.router.navigate(['/login']);
@@ -76,21 +78,25 @@ export class AuthService {
 
   private _handleAuthSuccess(response: AuthResponse): void {
     localStorage.setItem(TOKEN_KEY, response.token);
-    this._token.set(response.token);
-    this._currentUser.set({
+    const sessionData: UserSession = {
       email: response.email,
       rol: response.rol,
       tenantId: response.tenantId,
       nombreTenant: response.nombreTenant,
-    });
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    this._token.set(response.token);
+    this._currentUser.set(sessionData);
   }
 
   private _restoreSession(): void {
     const storedToken = localStorage.getItem(TOKEN_KEY);
-    if (storedToken) {
-      // Solo restauramos el token; la sesión completa se reconstruiría
-      // en un endpoint /me si se dispusiera de él.
+    const savedUser = localStorage.getItem(SESSION_KEY);
+    if (storedToken && savedUser) {
+      // Restaura tanto el token como los datos de usuario para que
+      // isAuthenticated() devuelva true inmediatamente tras F5.
       this._token.set(storedToken);
+      this._currentUser.set(JSON.parse(savedUser) as UserSession);
     }
   }
 }
