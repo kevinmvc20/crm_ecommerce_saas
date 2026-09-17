@@ -7,7 +7,7 @@ import { AuthService } from '../../../core/services/auth.service';
 interface NavItem {
   label: string;
   route: string;
-  icon: 'dashboard' | 'crm' | 'catalog' | 'orders' | 'settings';
+  icon: 'dashboard' | 'crm' | 'crm-leads' | 'catalog' | 'orders' | 'settings';
 }
 
 // ─── Catálogos de ítems por rol ───────────────────────────────────────────────
@@ -19,10 +19,11 @@ const NAV_SUPER_ADMIN: NavItem[] = [
 ];
 
 const NAV_TENANT: NavItem[] = [
-  { label: 'Dashboard',        route: '/admin/dashboard', icon: 'dashboard' },
-  { label: 'Catálogo & Stock', route: '/admin/catalogo',  icon: 'catalog'   },
-  { label: 'Ventas & Pedidos', route: '/admin/ventas',    icon: 'orders'    },
-  { label: 'Configuración',    route: '/admin/config',    icon: 'settings'  },
+  { label: 'Dashboard',          route: '/admin/dashboard',  icon: 'dashboard' },
+  { label: 'CRM & Prospectos',   route: '/admin/crm/leads',  icon: 'crm-leads' },
+  { label: 'Catálogo & Stock',   route: '/admin/catalogo',   icon: 'catalog'   },
+  { label: 'Ventas & Pedidos',   route: '/admin/ventas',     icon: 'orders'    },
+  { label: 'Configuración',      route: '/admin/config',     icon: 'settings'  },
 ];
 
 @Component({

@@ -40,6 +40,14 @@ export const routes: Routes = [
                     ),
             },
             {
+                // /admin/crm/leads — módulo CRM de gestión de prospectos
+                path: 'crm/leads',
+                loadComponent: () =>
+                    import('./features/crm/leads/lead-list/lead-list.component').then(
+                        m => m.LeadListComponent
+                    ),
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full',

@@ -1,0 +1,849 @@
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║              CRM – Gestión de Prospectos (Leads)                 ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+<div class="p-6 space-y-6">
+
+  <!-- ── CABECERA DE PÁGINA ─────────────────────────────────────────── -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+        CRM &amp; Prospectos
+      </h1>
+      <p class="mt-1 text-sm text-slate-500">
+        Gestiona tu pipeline comercial: registra, califica y convierte leads.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Botón recargar -->
+      <button id="btn-recargar-leads" type="button" (click)="cargarLeads()" [disabled]="isLoading()" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2
+               text-sm font-medium text-slate-600 shadow-sm transition-all duration-150
+               hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50" aria-label="Recargar lista de prospectos">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        <span class="hidden sm:inline">Recargar</span>
+      </button>
+
+      <!-- Botón nuevo prospecto -->
+      <button id="btn-nuevo-prospecto" type="button" (click)="abrirNuevoModal()" class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2
+               text-sm font-semibold text-white shadow-md shadow-blue-500/20
+               transition-all duration-150 hover:bg-blue-700 hover:shadow-blue-500/30
+               focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        Nuevo Prospecto
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ESTADO DE CARGA ─────────────────────────────────────────────── -->
+  @if (isLoading()) {
+  <div class="flex items-center justify-center py-20 text-slate-400">
+    <svg class="mr-3 h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+    <span class="text-sm font-medium">Cargando prospectos…</span>
+  </div>
+  }
+
+  <!-- ── ERROR GLOBAL ────────────────────────────────────────────────── -->
+  @if (!isLoading() && errorMessage()) {
+  <div class="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+    role="alert">
+    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+      aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
+    <span>{{ errorMessage() }}</span>
+    <button type="button" (click)="cargarLeads()"
+      class="ml-auto underline underline-offset-2 hover:text-red-900 font-medium">
+      Reintentar
+    </button>
+  </div>
+  }
+
+  <!-- ── TABLA PRINCIPAL ────────────────────────────────────────────── -->
+  @if (!isLoading() && !errorMessage()) {
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+    <!-- Estado vacío -->
+    @if (leads().length === 0) {
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+      <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
+        <svg class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+        </svg>
+      </div>
+      <p class="text-base font-semibold text-slate-700">Sin prospectos registrados</p>
+      <p class="mt-1 text-sm text-slate-400">
+        Registra tu primer prospecto para comenzar el pipeline comercial.
+      </p>
+      <button type="button" (click)="abrirNuevoModal()" class="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2
+                         text-sm font-semibold text-white transition hover:bg-blue-700">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        Nuevo Prospecto
+      </button>
+    </div>
+    }
+
+    <!-- Tabla de datos -->
+    @if (leads().length > 0) {
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-100" aria-label="Tabla de prospectos CRM">
+        <thead class="bg-slate-50/80">
+          <tr>
+            <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Prospecto
+            </th>
+            <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Contacto
+            </th>
+            <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Vendedor
+            </th>
+            <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Estado
+            </th>
+            <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Score
+            </th>
+            <th scope="col"
+              class="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+          @for (lead of leads(); track lead.id) {
+          <tr class="group transition-colors duration-100 hover:bg-slate-50/70">
+
+            <!-- Nombre del prospecto -->
+            <td class="whitespace-nowrap px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full
+                                  bg-blue-100 text-sm font-bold text-blue-600">
+                  {{ lead.nombre[0].toUpperCase() }}
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-slate-800">{{ lead.nombre }}</p>
+                  <p class="text-[11px] text-slate-400">
+                    {{ lead.createdAt | date:'dd MMM yyyy' }}
+                  </p>
+                </div>
+              </div>
+            </td>
+
+            <!-- Contacto -->
+            <td class="px-6 py-4">
+              <p class="text-sm text-slate-700">{{ lead.email }}</p>
+              <p class="text-xs text-slate-400">{{ lead.telefono }}</p>
+            </td>
+
+            <!-- Vendedor asignado -->
+            <td class="whitespace-nowrap px-6 py-4">
+              @if (lead.nombreVendedor) {
+              <span class="text-sm text-slate-700">{{ lead.nombreVendedor }}</span>
+              } @else {
+              <span class="text-xs text-slate-400 italic">Sin asignar</span>
+              }
+            </td>
+
+            <!-- Badge de estado -->
+            <td class="whitespace-nowrap px-6 py-4">
+              <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1"
+                [ngClass]="estadoBadgeClass(lead.estado)">
+                {{ estadoLabel(lead.estado) }}
+              </span>
+            </td>
+
+            <!-- Score con barra de progreso -->
+            <td class="px-6 py-4">
+              @if (lead.score !== null) {
+              <div class="flex items-center gap-2">
+                <div class="h-1.5 w-20 rounded-full bg-slate-100 overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-500" [ngClass]="scoreBarClass(lead.score)"
+                    [style.width.%]="lead.score">
+                  </div>
+                </div>
+                <span class="text-xs font-semibold tabular-nums text-slate-600">
+                  {{ lead.score }}
+                </span>
+              </div>
+              } @else {
+              <span class="text-xs text-slate-400 italic">—</span>
+              }
+            </td>
+
+            <!-- Acciones -->
+            <td class="whitespace-nowrap px-6 py-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+
+                <!-- ── Pill: Requiere Vendedor (lead en Bolsa General activo) ── -->
+                @if (requiereAsignacion(lead)) {
+                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium
+                               ring-1 ring-amber-200 bg-amber-50 text-amber-700">
+                  <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2.5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  Requiere vendedor
+                </span>
+                }
+
+                <!-- Asignar / Reasignar Vendedor (Solo ADMIN_EMPRESA) -->
+                @if (puedeAsignar(lead)) {
+                <button type="button" [id]="'btn-asignar-' + lead.id" (click)="abrirAsignarModal(lead)"
+                  [ngClass]="requiereAsignacion(lead)
+                    ? 'border-blue-300 bg-blue-600 text-white hover:bg-blue-700'
+                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:border-slate-300'"
+                  class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all duration-150"
+                  [attr.aria-label]="'Asignar vendedor a ' + lead.nombre">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                  </svg>
+                  {{ lead.vendedorId ? 'Reasignar' : 'Asignar' }}
+                </button>
+                }
+
+                <!-- Calificar (solo si tiene vendedor) -->
+                @if (puedeCalificar(lead)) {
+                <button type="button" [id]="'btn-calificar-' + lead.id" (click)="abrirCalificarModal(lead)" class="inline-flex items-center gap-1.5 rounded-lg border border-violet-200
+                                 bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700
+                                 transition-all duration-150 hover:bg-violet-100 hover:border-violet-300"
+                  [attr.aria-label]="'Calificar lead ' + lead.nombre">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.040.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                  Calificar
+                </button>
+                }
+
+                <!-- Convertir (solo si tiene vendedor y está CALIFICADO) -->
+                @if (puedeConvertir(lead)) {
+                <button type="button" [id]="'btn-convertir-' + lead.id" (click)="abrirConvertirModal(lead)" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200
+                                 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700
+                                 transition-all duration-150 hover:bg-amber-100 hover:border-amber-300"
+                  [attr.aria-label]="'Convertir a cliente ' + lead.nombre">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                  </svg>
+                  Convertir
+                </button>
+                }
+
+                <!-- Badge estado final (CONVERTIDO, DESCALIFICADO, o sin vendedor+sin acción) -->
+                @if (!puedeCalificar(lead) && !puedeConvertir(lead) && !requiereAsignacion(lead)) {
+                <span class="text-xs text-slate-400 italic">
+                  {{ lead.estado === 'CONVERTIDO' ? 'Cliente' : 'Inactivo' }}
+                </span>
+                }
+
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer con conteo -->
+    <div class="border-t border-slate-100 bg-slate-50/50 px-6 py-3">
+      <p class="text-xs text-slate-500">
+        {{ leads().length }} prospecto{{ leads().length !== 1 ? 's' : '' }} en el pipeline
+      </p>
+    </div>
+    }
+  </div>
+  }
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: NUEVO PROSPECTO
+     ══════════════════════════════════════════════════════════════════════ -->
+@if (isNuevoModalOpen()) {
+<!-- Backdrop -->
+<div class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" (click)="cerrarNuevoModal()" aria-hidden="true"></div>
+
+<!-- Panel -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true"
+  aria-labelledby="modal-nuevo-titulo">
+  <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200
+                animate-[fadeInScale_0.15s_ease-out]">
+
+    <!-- Encabezado -->
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100">
+          <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+          </svg>
+        </div>
+        <h2 id="modal-nuevo-titulo" class="text-base font-semibold text-slate-900">
+          Nuevo Prospecto
+        </h2>
+      </div>
+      <button type="button" (click)="cerrarNuevoModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400
+                       transition hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar modal">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo del formulario -->
+    <form [formGroup]="nuevoForm" (ngSubmit)="onSubmitNuevo()" novalidate>
+      <div class="space-y-4 px-6 py-5">
+
+        <!-- Nombre -->
+        <div>
+          <label for="nuevo-nombre" class="block text-sm font-medium text-slate-700 mb-1">
+            Nombre completo <span class="text-red-500">*</span>
+          </label>
+          <input id="nuevo-nombre" type="text" formControlName="nombre" placeholder="Ej. Ana García" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+                     text-slate-900 placeholder-slate-400 shadow-sm transition
+                     focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            [class.border-red-400]="hasNuevoError('nombre', 'required') || hasNuevoError('nombre', 'minlength')"
+            autocomplete="name" />
+          @if (hasNuevoError('nombre', 'required')) {
+          <p class="mt-1 text-xs text-red-600">El nombre es requerido.</p>
+          }
+          @if (hasNuevoError('nombre', 'minlength')) {
+          <p class="mt-1 text-xs text-red-600">Mínimo 2 caracteres.</p>
+          }
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label for="nuevo-email" class="block text-sm font-medium text-slate-700 mb-1">
+            Email
+            <span class="ml-1 text-xs font-normal text-slate-400">(o teléfono, al menos uno)</span>
+          </label>
+          <input id="nuevo-email" type="email" formControlName="email" placeholder="prospecto@empresa.com"
+            autocomplete="email" [ngClass]="{
+                'border-slate-300 focus:border-blue-500 focus:ring-blue-500/30':
+                  !contactFieldInvalid('email') && !hasNuevoError('email', 'email'),
+                'border-red-500 focus:ring-red-500/30':
+                  contactFieldInvalid('email') || hasNuevoError('email', 'email')
+              }" class="block w-full rounded-lg border bg-white px-3 py-2 text-sm
+                     text-slate-900 placeholder-slate-400 shadow-sm transition
+                     focus:outline-none focus:ring-2" />
+          @if (hasNuevoError('email', 'email')) {
+          <p class="mt-1 text-xs text-red-600">Ingresa un correo electrónico válido.</p>
+          }
+        </div>
+
+        <!-- Teléfono -->
+        <div>
+          <label for="nuevo-telefono" class="block text-sm font-medium text-slate-700 mb-1">
+            Teléfono
+            <span class="ml-1 text-xs font-normal text-slate-400">(o email, al menos uno)</span>
+          </label>
+          <input id="nuevo-telefono" type="tel" formControlName="telefono" placeholder="+591 7XXXXXXX"
+            autocomplete="tel" [ngClass]="{
+                'border-slate-300 focus:border-blue-500 focus:ring-blue-500/30': !contactFieldInvalid('telefono'),
+                'border-red-500 focus:ring-red-500/30': contactFieldInvalid('telefono')
+              }" class="block w-full rounded-lg border bg-white px-3 py-2 text-sm
+                     text-slate-900 placeholder-slate-400 shadow-sm transition
+                     focus:outline-none focus:ring-2" />
+        </div>
+
+        <!-- Error de validación de grupo: al menos un medio de contacto -->
+        @if (showContactError) {
+        <div class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5" role="alert">
+          <svg class="mt-px h-4 w-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0
+                         2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697
+                         16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <p class="text-xs text-red-700">
+            Debe proporcionar al menos un correo o un teléfono de contacto.
+          </p>
+        </div>
+        }
+
+        <!-- Vendedor asignado -->
+        <div>
+          <label for="nuevo-vendedor" class="block text-sm font-medium text-slate-700 mb-1">
+            Vendedor responsable
+            @if (authService.currentUser()?.rol !== 'ROLE_VENDEDOR') {
+            <span class="ml-1 text-xs font-normal text-slate-400">(opcional)</span>
+            }
+          </label>
+
+          @if (vendedores().length > 0) {
+          <select id="nuevo-vendedor" formControlName="vendedorId" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+                       text-slate-900 shadow-sm transition
+                       focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                       disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500">
+            <option [ngValue]="null">Sin asignar (Bolsa de prospectos)</option>
+            @for (v of vendedores(); track v.id) {
+            <option [ngValue]="v.id">
+              {{ v.nombreCompleto }} ({{ rolVendedorLabel(v.rolNombre) }})
+            </option>
+            }
+          </select>
+
+          <!-- Texto helper contextual según rol -->
+          @if (authService.currentUser()?.rol === 'ROLE_VENDEDOR') {
+          <p class="mt-1.5 flex items-center gap-1.5 text-xs text-slate-400">
+            <svg class="h-3.5 w-3.5 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+            Asignado automáticamente a tu cuenta comercial.
+          </p>
+          }
+          } @else {
+          <p class="text-xs text-slate-400 italic mt-1">
+            No hay vendedores activos disponibles en este tenant.
+          </p>
+          }
+        </div>
+
+        <!-- Error global del modal -->
+        @if (nuevoError()) {
+        <div class="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"
+          role="alert">
+          <svg class="h-4 w-4 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          {{ nuevoError() }}
+        </div>
+        }
+
+      </div>
+
+      <!-- Footer del modal -->
+      <div class="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+        <button type="button" (click)="cerrarNuevoModal()" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium
+                         text-slate-600 transition hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button id="btn-submit-nuevo" type="submit" [disabled]="nuevoForm.invalid || isSubmittingNuevo()" class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold
+                   text-white shadow-sm transition hover:bg-blue-700
+                   disabled:cursor-not-allowed disabled:opacity-50">
+          @if (isSubmittingNuevo()) {
+          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Guardando…
+          } @else {
+          Registrar Prospecto
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: CALIFICAR LEAD
+     ══════════════════════════════════════════════════════════════════════ -->
+@if (isCalificarModalOpen()) {
+<!-- Backdrop -->
+<div class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" (click)="cerrarCalificarModal()" aria-hidden="true">
+</div>
+
+<!-- Panel -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true"
+  aria-labelledby="modal-calificar-titulo">
+  <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+
+    <!-- Encabezado -->
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100">
+          <svg class="h-5 w-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.040.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+          </svg>
+        </div>
+        <div>
+          <h2 id="modal-calificar-titulo" class="text-base font-semibold text-slate-900">
+            Calificar Prospecto
+          </h2>
+          @if (leadACalificar()) {
+          <p class="text-xs text-slate-500">{{ leadACalificar()!.nombre }}</p>
+          }
+        </div>
+      </div>
+      <button type="button" (click)="cerrarCalificarModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400
+                       transition hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar modal">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo del formulario -->
+    <form [formGroup]="calificarForm" (ngSubmit)="onSubmitCalificar()" novalidate>
+      <div class="space-y-5 px-6 py-5">
+
+        <!-- Score con slider visual -->
+        <div>
+          <label for="calificar-score" class="block text-sm font-medium text-slate-700 mb-1">
+            Score de calificación (0 – 100) <span class="text-red-500">*</span>
+          </label>
+          <div class="flex items-center gap-3">
+            <input id="calificar-score" type="number" formControlName="score" min="0" max="100" placeholder="0" class="w-24 rounded-lg border border-slate-300 bg-white px-3 py-2 text-center
+                       text-sm font-semibold text-slate-900 shadow-sm transition
+                       focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+              [class.border-red-400]="hasCalificarError('score', 'required') || hasCalificarError('score', 'min') || hasCalificarError('score', 'max')" />
+            <!-- Barra visual de preview -->
+            <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-300"
+                [ngClass]="scoreBarClass(calificarForm.get('score')?.value)"
+                [style.width.%]="calificarForm.get('score')?.value ?? 0">
+              </div>
+            </div>
+          </div>
+          @if (hasCalificarError('score', 'required')) {
+          <p class="mt-1 text-xs text-red-600">El score es requerido.</p>
+          }
+          @if (hasCalificarError('score', 'min') || hasCalificarError('score', 'max')) {
+          <p class="mt-1 text-xs text-red-600">El score debe estar entre 0 y 100.</p>
+          }
+        </div>
+
+        <!-- Notas -->
+        <div>
+          <label for="calificar-notas" class="block text-sm font-medium text-slate-700 mb-1">
+            Notas de calificación <span class="text-red-500">*</span>
+          </label>
+          <textarea id="calificar-notas" formControlName="notas" rows="3"
+            placeholder="Describe el potencial del prospecto, necesidades identificadas…" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+                     text-slate-900 placeholder-slate-400 shadow-sm transition resize-none
+                     focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+            [class.border-red-400]="hasCalificarError('notas', 'required') || hasCalificarError('notas', 'minlength')">
+            </textarea>
+          @if (hasCalificarError('notas', 'required')) {
+          <p class="mt-1 text-xs text-red-600">Las notas son requeridas.</p>
+          }
+          @if (hasCalificarError('notas', 'minlength')) {
+          <p class="mt-1 text-xs text-red-600">Mínimo 5 caracteres.</p>
+          }
+        </div>
+
+        <!-- Error global -->
+        @if (calificarError()) {
+        <div class="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"
+          role="alert">
+          <svg class="h-4 w-4 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          {{ calificarError() }}
+        </div>
+        }
+
+      </div>
+
+      <!-- Footer del modal -->
+      <div class="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+        <button type="button" (click)="cerrarCalificarModal()" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium
+                         text-slate-600 transition hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button id="btn-submit-calificar" type="submit"
+          [disabled]="calificarForm.invalid || isSubmittingCalificar()"
+          class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold
+                   text-white shadow-sm transition hover:bg-violet-700
+                   disabled:opacity-50 disabled:cursor-not-allowed">
+          @if (isSubmittingCalificar()) {
+          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Guardando…
+          } @else {
+          Guardar Calificación
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: CONVERTIR A CLIENTE
+     ══════════════════════════════════════════════════════════════════════ -->
+@if (isConvertirModalOpen()) {
+<!-- Backdrop -->
+<div class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" (click)="cerrarConvertirModal()" aria-hidden="true">
+</div>
+
+<!-- Panel -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true"
+  aria-labelledby="modal-convertir-titulo">
+  <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+
+    <!-- Encabezado -->
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100">
+          <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+          </svg>
+        </div>
+        <div>
+          <h2 id="modal-convertir-titulo" class="text-base font-semibold text-slate-900">
+            Convertir a Cliente
+          </h2>
+          @if (leadAConvertir()) {
+          <p class="text-xs text-slate-500">{{ leadAConvertir()!.nombre }}</p>
+          }
+        </div>
+      </div>
+      <button type="button" (click)="cerrarConvertirModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400
+                       transition hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar modal">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo del formulario -->
+    <form [formGroup]="convertirForm" (ngSubmit)="onSubmitConvertir()" novalidate>
+      <div class="space-y-4 px-6 py-5">
+
+        <!-- Aviso informativo -->
+        <div
+          class="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
+          <svg class="h-4 w-4 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          Esta operación es irreversible. El prospecto pasará al estado <strong>&nbsp;Convertido&nbsp;</strong> y se
+          creará un registro de cliente.
+        </div>
+
+        <!-- CI / NIT -->
+        <div>
+          <label for="convertir-cinit" class="block text-sm font-medium text-slate-700 mb-1">
+            CI / NIT <span class="text-red-500" aria-hidden="true">*</span>
+          </label>
+          <input id="convertir-cinit" type="text" formControlName="ciNit" placeholder="Ej. 12345678" autocomplete="off"
+            aria-required="true" [ngClass]="{
+                'border-slate-300 focus:border-amber-500 focus:ring-amber-500/30': !convertirFieldInvalid('ciNit'),
+                'border-red-500 focus:ring-red-500/30': convertirFieldInvalid('ciNit')
+              }" class="block w-full rounded-lg border bg-white px-3 py-2 text-sm
+                     text-slate-900 placeholder-slate-400 shadow-sm transition
+                     focus:outline-none focus:ring-2" />
+          @if (hasConvertirError('ciNit', 'required')) {
+          <p class="mt-1 text-xs text-red-600" role="alert">
+            El CI o NIT es obligatorio para facturación.
+          </p>
+          }
+          @if (hasConvertirError('ciNit', 'minlength')) {
+          <p class="mt-1 text-xs text-red-600" role="alert">
+            Debe tener al menos 4 caracteres.
+          </p>
+          }
+        </div>
+
+        <!-- Razón Social -->
+        <div>
+          <label for="convertir-razon" class="block text-sm font-medium text-slate-700 mb-1">
+            Razón Social o Nombre fiscal <span class="text-red-500" aria-hidden="true">*</span>
+          </label>
+          <input id="convertir-razon" type="text" formControlName="razonSocialONombre"
+            placeholder="Ej. Empresa Ejemplo S.A. o Ana García" autocomplete="organization" aria-required="true"
+            [ngClass]="{
+                'border-slate-300 focus:border-amber-500 focus:ring-amber-500/30': !convertirFieldInvalid('razonSocialONombre'),
+                'border-red-500 focus:ring-red-500/30': convertirFieldInvalid('razonSocialONombre')
+              }" class="block w-full rounded-lg border bg-white px-3 py-2 text-sm
+                     text-slate-900 placeholder-slate-400 shadow-sm transition
+                     focus:outline-none focus:ring-2" />
+          @if (hasConvertirError('razonSocialONombre', 'required')) {
+          <p class="mt-1 text-xs text-red-600" role="alert">
+            La Razón Social o Nombre fiscal es obligatorio.
+          </p>
+          }
+          @if (hasConvertirError('razonSocialONombre', 'minlength')) {
+          <p class="mt-1 text-xs text-red-600" role="alert">
+            Debe tener al menos 3 caracteres.
+          </p>
+          }
+        </div>
+
+        <!-- Error global -->
+        @if (convertirError()) {
+        <div class="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"
+          role="alert">
+          <svg class="h-4 w-4 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          {{ convertirError() }}
+        </div>
+        }
+
+      </div>
+
+      <!-- Footer del modal -->
+      <div class="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+        <button type="button" (click)="cerrarConvertirModal()" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium
+                         text-slate-600 transition hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button id="btn-submit-convertir" type="submit" [disabled]="convertirForm.invalid || isSubmittingConvertir()"
+          class="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold
+                   text-white shadow-sm transition hover:bg-amber-600
+                   disabled:cursor-not-allowed disabled:opacity-50">
+          @if (isSubmittingConvertir()) {
+          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Procesando…
+          } @else {
+          Convertir a Cliente
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+}
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: ASIGNAR VENDEDOR (ADMIN_EMPRESA)
+     ══════════════════════════════════════════════════════════════════════ -->
+@if (isAsignarModalOpen()) {
+<!-- Backdrop -->
+<div class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" (click)="cerrarAsignarModal()" aria-hidden="true">
+</div>
+
+<!-- Panel -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true"
+  aria-labelledby="modal-asignar-titulo">
+  <div
+    class="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 animate-[fadeInScale_0.15s_ease-out]">
+
+    <!-- Encabezado -->
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100">
+          <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+          </svg>
+        </div>
+        <div>
+          <h2 id="modal-asignar-titulo" class="text-base font-semibold text-slate-900">
+            Asignar Ejecutivo Comercial
+          </h2>
+          @if (leadParaAsignar()) {
+          <p class="text-xs text-slate-500">{{ leadParaAsignar()!.nombre }}</p>
+          }
+        </div>
+      </div>
+      <button type="button" (click)="cerrarAsignarModal()"
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+        aria-label="Cerrar modal">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Formulario de asignación -->
+    <form [formGroup]="asignarForm" (ngSubmit)="onSubmitAsignar()" novalidate>
+      <div class="space-y-4 px-6 py-5">
+        <p class="text-sm text-slate-600">
+          Define el responsable comercial que gestionará y convertirá este prospecto.
+        </p>
+
+        <div>
+          <label for="asignar-vendedor-select" class="block text-sm font-medium text-slate-700 mb-1">
+            Ejecutivo responsable
+          </label>
+          <select id="asignar-vendedor-select" formControlName="vendedorId"
+            class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+            <option [ngValue]="null">Sin asignar (Bolsa de prospectos)</option>
+            @for (v of vendedores(); track v.id) {
+            <option [ngValue]="v.id">
+              {{ v.nombreCompleto }} ({{ rolVendedorLabel(v.rolNombre) }})
+            </option>
+            }
+          </select>
+        </div>
+
+        <!-- Error en caso de fallo -->
+        @if (asignarError()) {
+        <div class="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"
+          role="alert">
+          <svg class="h-4 w-4 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          {{ asignarError() }}
+        </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+        <button type="button" (click)="cerrarAsignarModal()"
+          class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button id="btn-submit-asignar" type="submit" [disabled]="isSubmittingAsignar()"
+          class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+          @if (isSubmittingAsignar()) {
+          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Guardando…
+          } @else {
+          Guardar Asignación
+          }
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+}
