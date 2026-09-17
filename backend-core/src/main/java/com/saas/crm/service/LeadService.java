@@ -1,0 +1,280 @@
+package com.saas.crm.service;
+
+import com.saas.crm.domain.entity.Cliente;
+import com.saas.crm.domain.entity.Lead;
+import com.saas.crm.domain.entity.Tenant;
+import com.saas.crm.domain.entity.Usuario;
+import com.saas.crm.domain.enums.EstadoLead;
+import com.saas.crm.dto.crm.LeadCalificarRequest;
+import com.saas.crm.dto.crm.LeadConvertirRequest;
+import com.saas.crm.dto.crm.LeadCreateRequest;
+import com.saas.crm.dto.crm.LeadResponse;
+import com.saas.crm.repository.ClienteRepository;
+import com.saas.crm.repository.LeadRepository;
+import com.saas.crm.repository.TenantRepository;
+import com.saas.crm.repository.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Servicio de negocio para la gestión del ciclo de vida de los Leads (prospectos)
+ * en el módulo CRM.
+ *
+ * <p>Aplica aislamiento multi-tenant en todas las operaciones: cada consulta
+ * y mutación está acotada al {@code tenantId} del usuario autenticado.</p>
+ */
+@Service
+@RequiredArgsConstructor
+public class LeadService {
+
+    private static final String ROL_VENDEDOR      = "ROLE_VENDEDOR";
+    private static final String ROL_ADMIN_EMPRESA = "ROLE_ADMIN_EMPRESA";
+
+    private final LeadRepository    leadRepository;
+    private final ClienteRepository clienteRepository;
+    private final TenantRepository  tenantRepository;
+    private final UsuarioRepository usuarioRepository;
+
+    // ─── Crear Lead ───────────────────────────────────────────────────────────
+
+    /**
+     * Registra un nuevo Lead en estado {@code NUEVO} para el tenant indicado.
+     *
+     * <p>Si se provee {@code vendedorId} en el request, valida que el vendedor
+     * pertenezca al mismo tenant antes de asignarlo.</p>
+     *
+     * @param tenantId UUID del tenant autenticado
+     * @param request  datos del nuevo lead
+     * @return {@link LeadResponse} con los datos persistidos
+     */
+    @Transactional
+    public LeadResponse crearLead(UUID tenantId, LeadCreateRequest request) {
+
+        Tenant tenant = resolverTenant(tenantId);
+
+        Lead lead = new Lead();
+        lead.setTenant(tenant);
+        lead.setNombre(request.nombre());
+        lead.setEmail(request.email());
+        lead.setTelefono(request.telefono());
+        lead.setEstado(EstadoLead.NUEVO);
+        lead.setScore(0);
+
+        // Asignación opcional de vendedor
+        if (request.vendedorId() != null) {
+            Usuario vendedor = resolverVendedorDelTenant(tenantId, request.vendedorId());
+            lead.setVendedorAsignado(vendedor);
+        }
+
+        return toResponse(leadRepository.save(lead));
+    }
+
+    // ─── Listar Leads ─────────────────────────────────────────────────────────
+
+    /**
+     * Lista los leads del tenant con filtrado según el rol del usuario solicitante.
+     *
+     * <ul>
+     *   <li>Si {@code rolSolicitante} es {@code ROLE_VENDEDOR}: devuelve solo los
+     *       leads asignados al {@code usuarioId} indicado.</li>
+     *   <li>Si {@code rolSolicitante} es {@code ROLE_ADMIN_EMPRESA}: devuelve todos
+     *       los leads del tenant.</li>
+     * </ul>
+     *
+     * @param tenantId        UUID del tenant autenticado
+     * @param usuarioId       UUID del usuario que realiza la solicitud
+     * @param rolSolicitante  nombre del rol del usuario (p.e. "ROLE_VENDEDOR")
+     * @return lista de {@link LeadResponse}
+     */
+    @Transactional(readOnly = true)
+    public List<LeadResponse> listarLeads(UUID tenantId, UUID usuarioId, String rolSolicitante) {
+
+        List<Lead> leads;
+
+        if (ROL_VENDEDOR.equals(rolSolicitante)) {
+            // El vendedor solo ve sus propios leads asignados
+            leads = leadRepository.findByTenantIdAndVendedorAsignadoId(tenantId, usuarioId);
+        } else {
+            // ADMIN_EMPRESA ve todos los leads del tenant
+            leads = leadRepository.findByTenantId(tenantId);
+        }
+
+        return leads.stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // ─── Calificar Lead ───────────────────────────────────────────────────────
+
+    /**
+     * Actualiza el score y las notas del lead, avanzando su estado a
+     * {@code CALIFICADO}. Lanza HTTP 404 si el lead no pertenece al tenant.
+     *
+     * @param tenantId UUID del tenant autenticado
+     * @param leadId   UUID del lead a calificar
+     * @param request  nuevos valores de score y notas
+     * @return {@link LeadResponse} actualizado
+     */
+    @Transactional
+    public LeadResponse calificarLead(UUID tenantId, UUID leadId, LeadCalificarRequest request) {
+
+        Lead lead = resolverLeadDelTenant(tenantId, leadId);
+
+        // Validar que el lead aún puede ser calificado (no convertido ni descalificado)
+        if (lead.getEstado() == EstadoLead.CONVERTIDO) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El lead ya fue convertido a cliente y no puede calificarse nuevamente."
+            );
+        }
+        if (lead.getEstado() == EstadoLead.DESCALIFICADO) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El lead está descalificado y no puede modificarse."
+            );
+        }
+
+        lead.setScore(request.score());
+        lead.setNotasCalificacion(request.notas());
+        lead.setEstado(EstadoLead.CALIFICADO);
+
+        return toResponse(leadRepository.save(lead));
+    }
+
+    // ─── Convertir Lead a Cliente ─────────────────────────────────────────────
+
+    /**
+     * Convierte un Lead existente en un {@code Cliente}.
+     *
+     * <p>Reglas de negocio aplicadas en orden:
+     * <ol>
+     *   <li>El lead debe pertenecer al tenant (HTTP 404).</li>
+     *   <li>El lead no debe estar ya convertido o descalificado (HTTP 400).</li>
+     *   <li>El CI/NIT provisto no debe existir ya en el tenant (HTTP 409).</li>
+     *   <li>Se persiste el nuevo {@code Cliente} con {@code leadOrigen} vinculado.</li>
+     *   <li>El estado del lead se actualiza a {@code CONVERTIDO}.</li>
+     * </ol>
+     * </p>
+     *
+     * @param tenantId UUID del tenant autenticado
+     * @param leadId   UUID del lead a convertir
+     * @param request  datos mínimos para crear el cliente
+     * @return {@link LeadResponse} con el lead en estado {@code CONVERTIDO}
+     */
+    @Transactional
+    public LeadResponse convertirACliente(UUID tenantId, UUID leadId, LeadConvertirRequest request) {
+
+        Lead lead = resolverLeadDelTenant(tenantId, leadId);
+
+        // 1. Validar estado del lead
+        if (lead.getEstado() == EstadoLead.CONVERTIDO) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El lead ya fue convertido previamente a cliente."
+            );
+        }
+        if (lead.getEstado() == EstadoLead.DESCALIFICADO) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede convertir un lead descalificado."
+            );
+        }
+
+        // 2. Verificar unicidad de CI/NIT en el tenant
+        if (clienteRepository.existsByTenantIdAndCiNit(tenantId, request.ciNit())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe un cliente con el CI/NIT '%s' en este tenant.".formatted(request.ciNit())
+            );
+        }
+
+        // 3. Crear el Cliente vinculando el lead de origen
+        Cliente cliente = new Cliente();
+        cliente.setTenant(lead.getTenant());
+        cliente.setLeadOrigen(lead);
+        cliente.setRazonSocialONombre(request.razonSocialONombre());
+        cliente.setCiNit(request.ciNit());
+        cliente.setEmail(lead.getEmail());
+        cliente.setTelefono(lead.getTelefono());
+        cliente.setActivo(true);
+        clienteRepository.save(cliente);
+
+        // 4. Marcar el lead como CONVERTIDO
+        lead.setEstado(EstadoLead.CONVERTIDO);
+        return toResponse(leadRepository.save(lead));
+    }
+
+    // ─── Helpers privados ─────────────────────────────────────────────────────
+
+    /** Resuelve el Tenant o lanza HTTP 404. */
+    private Tenant resolverTenant(UUID tenantId) {
+        return tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No existe un tenant con id: " + tenantId
+                ));
+    }
+
+    /**
+     * Resuelve el Lead asegurando que pertenezca al tenant indicado.
+     * Lanza HTTP 404 si no existe o no pertenece al tenant.
+     */
+    private Lead resolverLeadDelTenant(UUID tenantId, UUID leadId) {
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No existe un lead con id: " + leadId
+                ));
+
+        if (!lead.getTenant().getId().equals(tenantId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No existe un lead con id: " + leadId
+            );
+        }
+        return lead;
+    }
+
+    /**
+     * Resuelve el vendedor validando que pertenezca al tenant indicado.
+     * Lanza HTTP 400 si el vendedor no existe o está en un tenant diferente.
+     */
+    private Usuario resolverVendedorDelTenant(UUID tenantId, UUID vendedorId) {
+        Usuario vendedor = usuarioRepository.findById(vendedorId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "No existe un vendedor con id: " + vendedorId
+                ));
+
+        if (vendedor.getTenant() == null || !vendedor.getTenant().getId().equals(tenantId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El vendedor indicado no pertenece a este tenant."
+            );
+        }
+        return vendedor;
+    }
+
+    /** Convierte un {@link Lead} en su {@link LeadResponse} inmutable. */
+    private LeadResponse toResponse(Lead lead) {
+        Usuario vendedor = lead.getVendedorAsignado();
+        return new LeadResponse(
+                lead.getId(),
+                lead.getTenant().getId(),
+                vendedor != null ? vendedor.getId() : null,
+                vendedor != null ? vendedor.getNombreCompleto() : null,
+                lead.getNombre(),
+                lead.getEmail(),
+                lead.getTelefono(),
+                lead.getEstado(),
+                lead.getScore(),
+                lead.getCreatedAt()
+        );
+    }
+}
