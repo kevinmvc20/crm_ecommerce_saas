@@ -33,6 +33,9 @@ public class Usuario implements UserDetails {
     @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;
 
+    @Column(name = "nombre_completo", nullable = false, length = 200)
+    private String nombreCompleto;
+
     @Column(name = "email", nullable = false, unique = true, length = 150)
     private String email;
 
@@ -47,6 +50,14 @@ public class Usuario implements UserDetails {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    /** Inicializa {@code createdAt} automáticamente antes de la primera persistencia. */
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 
     // ─── UserDetails ──────────────────────────────────────────────────────────
 
