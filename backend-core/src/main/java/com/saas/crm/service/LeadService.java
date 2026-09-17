@@ -191,6 +191,13 @@ public class LeadService {
                     "El prospecto debe tener un vendedor asignado antes de ser convertido a cliente.");
         }
 
+        // Guarda: el prospecto debe tener un score mínimo de 70 para ser convertido
+        if (lead.getScore() == null || lead.getScore() < 70) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "El prospecto debe tener un score mínimo de 70 para ser convertido a cliente.");
+        }
+
         // 1. Validar estado del lead
         if (lead.getEstado() == EstadoLead.CONVERTIDO) {
             throw new ResponseStatusException(

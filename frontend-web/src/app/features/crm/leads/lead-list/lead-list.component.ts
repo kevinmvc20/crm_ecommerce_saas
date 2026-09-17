@@ -506,14 +506,53 @@ export class LeadListComponent implements OnInit {
 
   /**
    * Controla si un lead puede ser convertido a cliente.
-   * Requiere vendedor asignado + estado CALIFICADO.
+   * Requiere vendedor asignado + estado CALIFICADO + score >= 70.
    */
   puedeConvertir(lead: Lead): boolean {
     return (
       lead.vendedorId !== null &&
       lead.vendedorId !== undefined &&
-      lead.estado === 'CALIFICADO'
+      lead.estado === 'CALIFICADO' &&
+      (lead.score ?? 0) >= 70
     );
+  }
+
+  /**
+   * true cuando el lead está CALIFICADO con vendedor pero su score
+   * es insuficiente (< 70) para la conversión a cliente.
+   * Se usa para mostrar el pill informativo en la columna de acciones.
+   */
+  scoreInsuficienteParaConversion(lead: Lead): boolean {
+    return (
+      lead.vendedorId !== null &&
+      lead.vendedorId !== undefined &&
+      lead.estado === 'CALIFICADO' &&
+      (lead.score ?? 0) < 70
+    );
+  }
+
+  /**
+   * Devuelve la etiqueta y las clases Tailwind del badge de temperatura
+   * comercial según el score del lead. Se usa en el modal de calificación.
+   */
+  temperaturaScore(score: number | null): { label: string; classBadge: string } {
+    const s = score ?? 0;
+    if (s >= 70) {
+      return {
+        label: 'Apto para conversión (Caliente)',
+        classBadge: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+      };
+    }
+    if (s >= 40) {
+      return {
+        label: 'En maduración (Tibio)',
+        classBadge: 'bg-amber-50 text-amber-700 ring-amber-200',
+      };
+    }
+    return {
+      label: 'Interés preliminar (Frío)',
+      classBadge: 'bg-red-50 text-red-700 ring-red-200',
+    };
   }
 
   /**

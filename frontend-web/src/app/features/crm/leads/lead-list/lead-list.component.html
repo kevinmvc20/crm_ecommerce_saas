@@ -234,7 +234,16 @@
                 </button>
                 }
 
-                <!-- Convertir (solo si tiene vendedor y está CALIFICADO) -->
+                <!-- Pill informativo: score insuficiente para conversión (CALIFICADO pero < 70) -->
+                @if (scoreInsuficienteParaConversion(lead)) {
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                               ring-1 ring-slate-200 bg-slate-100 text-slate-600"
+                  title="El lead necesita un score de al menos 70 para ser convertido">
+                  Score bajo (&lt; 70)
+                </span>
+                }
+
+                <!-- Convertir (solo si tiene vendedor, está CALIFICADO y score >= 70) -->
                 @if (puedeConvertir(lead)) {
                 <button type="button" [id]="'btn-convertir-' + lead.id" (click)="abrirConvertirModal(lead)" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200
                                  bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700
@@ -509,24 +518,53 @@
     <form [formGroup]="calificarForm" (ngSubmit)="onSubmitCalificar()" novalidate>
       <div class="space-y-5 px-6 py-5">
 
-        <!-- Score con slider visual -->
+        <!-- Score: entrada dual sincronizada (slider + número) + badge de temperatura -->
         <div>
-          <label for="calificar-score" class="block text-sm font-medium text-slate-700 mb-1">
-            Score de calificación (0 – 100) <span class="text-red-500">*</span>
-          </label>
-          <div class="flex items-center gap-3">
-            <input id="calificar-score" type="number" formControlName="score" min="0" max="100" placeholder="0" class="w-24 rounded-lg border border-slate-300 bg-white px-3 py-2 text-center
-                       text-sm font-semibold text-slate-900 shadow-sm transition
-                       focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+          <!-- Fila de etiqueta + badge dinámico de temperatura -->
+          <div class="flex items-center justify-between mb-2">
+            <label for="calificar-score-input" class="text-sm font-medium text-slate-700">
+              Score de calificación (0 – 100) <span class="text-red-500">*</span>
+            </label>
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 transition-all duration-300"
+              [ngClass]="temperaturaScore(calificarForm.get('score')?.value).classBadge">
+              {{ temperaturaScore(calificarForm.get('score')?.value).label }}
+            </span>
+          </div>
+
+          <!-- Controles sincronizados: número + slider -->
+          <div class="flex items-center gap-3 mb-3">
+            <!-- Input numérico -->
+            <input id="calificar-score-input" type="number" formControlName="score"
+              min="0" max="100" placeholder="0"
+              class="w-20 rounded-lg border border-slate-300 bg-white px-3 py-2 text-center
+                     text-sm font-bold text-slate-900 shadow-sm transition
+                     focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
               [class.border-red-400]="hasCalificarError('score', 'required') || hasCalificarError('score', 'min') || hasCalificarError('score', 'max')" />
-            <!-- Barra visual de preview -->
-            <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-300"
-                [ngClass]="scoreBarClass(calificarForm.get('score')?.value)"
-                [style.width.%]="calificarForm.get('score')?.value ?? 0">
-              </div>
+            <!-- Slider sincronizado con el mismo formControl -->
+            <input type="range" formControlName="score" min="0" max="100" step="5"
+              class="flex-1 h-2 accent-violet-600 cursor-pointer" aria-label="Slider de score" />
+          </div>
+
+          <!-- Barra de referencia con umbral en 70 pts -->
+          <div class="relative h-2 rounded-full bg-slate-100 overflow-visible mb-1">
+            <!-- Progreso coloreado -->
+            <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
+              [ngClass]="scoreBarClass(calificarForm.get('score')?.value)"
+              [style.width.%]="calificarForm.get('score')?.value ?? 0">
+            </div>
+            <!-- Marcador del umbral de conversión en el 70% -->
+            <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center"
+              style="left: 70%">
+              <div class="w-0.5 h-4 bg-slate-400 rounded-full"></div>
             </div>
           </div>
+          <!-- Leyenda del umbral -->
+          <div class="flex justify-end">
+            <span class="text-[10px] text-slate-400 font-medium" style="margin-right: calc(30% - 1rem)">
+              Umbral de conversión: 70 pts
+            </span>
+          </div>
+
           @if (hasCalificarError('score', 'required')) {
           <p class="mt-1 text-xs text-red-600">El score es requerido.</p>
           }
