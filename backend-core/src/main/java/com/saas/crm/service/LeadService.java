@@ -1,15 +1,18 @@
 package com.saas.crm.service;
 
 import com.saas.crm.domain.entity.Cliente;
+import com.saas.crm.domain.entity.InteraccionCRM;
 import com.saas.crm.domain.entity.Lead;
 import com.saas.crm.domain.entity.Tenant;
 import com.saas.crm.domain.entity.Usuario;
 import com.saas.crm.domain.enums.EstadoLead;
+import com.saas.crm.domain.enums.TipoInteraccionCRM;
 import com.saas.crm.dto.crm.LeadCalificarRequest;
 import com.saas.crm.dto.crm.LeadConvertirRequest;
 import com.saas.crm.dto.crm.LeadCreateRequest;
 import com.saas.crm.dto.crm.LeadResponse;
 import com.saas.crm.repository.ClienteRepository;
+import com.saas.crm.repository.InteraccionCRMRepository;
 import com.saas.crm.repository.LeadRepository;
 import com.saas.crm.repository.TenantRepository;
 import com.saas.crm.repository.UsuarioRepository;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,6 +47,7 @@ public class LeadService {
     private final ClienteRepository clienteRepository;
     private final TenantRepository tenantRepository;
     private final UsuarioRepository usuarioRepository;
+    private final InteraccionCRMRepository interaccionCRMRepository;
 
     // ─── Crear Lead ───────────────────────────────────────────────────────────
 
@@ -119,26 +124,44 @@ public class LeadService {
 
     /**
      * Actualiza el score y las notas del lead, avanzando su estado a
-     * {@code CALIFICADO}. Lanza HTTP 404 si el lead no pertenece al tenant.
+     * {@code CALIFICADO}. Registra automáticamente una entrada de auditoría
+     * en la bitácora (InteraccionCRM tipo NOTA).
      *
-     * @param tenantId UUID del tenant autenticado
-     * @param leadId   UUID del lead a calificar
-     * @param request  nuevos valores de score y notas
+     * <p>Reglas de negocio aplicadas en orden:</p>
+     * <ol>
+     *   <li>El lead debe tener vendedor asignado (HTTP 400).</li>
+     *   <li>El lead debe haber sido contactado previamente; si su estado es
+     *       {@code NUEVO} se rechaza la calificación (HTTP 400).</li>
+     *   <li>El lead no debe estar en estado terminal (HTTP 400).</li>
+     * </ol>
+     *
+     * @param tenantId          UUID del tenant autenticado
+     * @param usuarioEjecutivo  usuario que realiza la calificación (puede ser null,
+     *                          en cuyo caso se usa el vendedor asignado del lead)
+     * @param leadId            UUID del lead a calificar
+     * @param request           nuevos valores de score y notas
      * @return {@link LeadResponse} actualizado
      */
     @Transactional
-    public LeadResponse calificarLead(UUID tenantId, UUID leadId, LeadCalificarRequest request) {
+    public LeadResponse calificarLead(UUID tenantId, Usuario usuarioEjecutivo, UUID leadId, LeadCalificarRequest request) {
 
         Lead lead = resolverLeadDelTenant(tenantId, leadId);
 
-        // Guarda: el prospecto debe tener vendedor asignado antes de calificarse
+        // Guarda 1: el prospecto debe tener vendedor asignado antes de calificarse
         if (lead.getVendedorAsignado() == null) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "El prospecto debe tener un vendedor asignado antes de ser calificado.");
         }
 
-        // Validar que el lead aún puede ser calificado (no convertido ni descalificado)
+        // Guarda 2 (candado secuencial): el prospecto debe haber sido contactado
+        if (lead.getEstado() == EstadoLead.NUEVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El prospecto debe ser contactado previamente antes de poder ser calificado.");
+        }
+
+        // Guarda 3: no permitir calificar estados terminales
         if (lead.getEstado() == EstadoLead.CONVERTIDO) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -150,11 +173,31 @@ public class LeadService {
                     "El lead está descalificado y no puede modificarse.");
         }
 
+        // Aplicar calificación
         lead.setScore(request.score());
         lead.setNotasCalificacion(request.notas());
         lead.setEstado(EstadoLead.CALIFICADO);
+        Lead leadGuardado = leadRepository.save(lead);
 
-        return toResponse(leadRepository.save(lead));
+        // Auditoría: registrar la calificación como NOTA en la bitácora
+        Usuario ejecutorAuditoria = (usuarioEjecutivo != null)
+                ? usuarioEjecutivo
+                : lead.getVendedorAsignado();
+
+        if (ejecutorAuditoria != null) {
+            InteraccionCRM interaccion = new InteraccionCRM();
+            interaccion.setTenant(lead.getTenant());
+            interaccion.setLead(leadGuardado);
+            interaccion.setEjecutivo(ejecutorAuditoria);
+            interaccion.setTipo(TipoInteraccionCRM.NOTA);
+            interaccion.setDescripcion(String.format(
+                    "Calificación comercial: %d/100 pts. Notas: %s",
+                    request.score(), request.notas()));
+            interaccion.setFechaHora(LocalDateTime.now());
+            interaccionCRMRepository.save(interaccion);
+        }
+
+        return toResponse(leadGuardado);
     }
 
     // ─── Convertir Lead a Cliente ─────────────────────────────────────────────

@@ -118,7 +118,7 @@ public class LeadController {
             @Valid @RequestBody LeadCalificarRequest request) {
 
         UUID tenantId = usuario.getTenant().getId();
-        LeadResponse updated = leadService.calificarLead(tenantId, id, request);
+        LeadResponse updated = leadService.calificarLead(tenantId, usuario, id, request);
         return ResponseEntity.ok(updated);
     }
 

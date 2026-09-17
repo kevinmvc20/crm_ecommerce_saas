@@ -336,6 +336,20 @@ export class LeadListComponent implements OnInit {
             list.map((l) => (l.id === updated.id ? updated : l))
           );
           this.cerrarCalificarModal();
+
+          // Si la bitácora está abierta para este mismo lead, refrescar su
+          // historial para que la NOTA de calificación aparezca de inmediato.
+          const bitacoraLead = this.leadSeleccionadoBitacora();
+          if (bitacoraLead && bitacoraLead.id === lead.id) {
+            this.isLoadingInteracciones.set(true);
+            this.interaccionService
+              .getInteraccionesPorLead(lead.id)
+              .pipe(finalize(() => this.isLoadingInteracciones.set(false)))
+              .subscribe({
+                next: (data) => this.interacciones.set(data),
+                error: () => {},
+              });
+          }
         },
         error: (err) => {
           this.calificarError.set(
@@ -593,14 +607,16 @@ export class LeadListComponent implements OnInit {
 
   /**
    * Controla si un lead puede ser calificado.
-   * Requiere vendedor asignado + estado activo (no CONVERTIDO ni DESCALIFICADO).
+   * Candado secuencial: requiere vendedor asignado Y que el lead haya sido
+   * contactado previamente (estado CONTACTADO o CALIFICADO).
+   * Los leads en estado NUEVO no pueden calificarse hasta no tener al menos
+   * una interacción registrada.
    */
   puedeCalificar(lead: Lead): boolean {
     return (
       lead.vendedorId !== null &&
       lead.vendedorId !== undefined &&
-      lead.estado !== 'CONVERTIDO' &&
-      lead.estado !== 'DESCALIFICADO'
+      (lead.estado === 'CONTACTADO' || lead.estado === 'CALIFICADO')
     );
   }
 

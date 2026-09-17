@@ -274,8 +274,22 @@
                 </button>
                 }
 
-                <!-- Badge estado final (CONVERTIDO, DESCALIFICADO, o sin vendedor+sin acción) -->
-                @if (!puedeCalificar(lead) && !puedeConvertir(lead) && !requiereAsignacion(lead)) {
+                <!-- Pill: Pendiente de contacto (NUEVO con vendedor – debe usar Seguimiento) -->
+                @if (lead.estado === 'NUEVO' && lead.vendedorId) {
+                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium
+                               ring-1 ring-sky-200 bg-sky-50 text-sky-700"
+                  title="Registra un primer contacto en la bitácora para poder calificar este prospecto">
+                  <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2.5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Pendiente de contacto
+                </span>
+                }
+
+                <!-- Badge estado final (CONVERTIDO o DESCALIFICADO) -->
+                @if (!puedeCalificar(lead) && !puedeConvertir(lead) && !requiereAsignacion(lead) && lead.estado !== 'NUEVO') {
                 <span class="text-xs text-slate-400 italic">
                   {{ lead.estado === 'CONVERTIDO' ? 'Cliente' : 'Inactivo' }}
                 </span>
