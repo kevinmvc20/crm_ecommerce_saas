@@ -141,6 +141,7 @@ public class TenantUsuarioService {
         return new UsuarioResponse(
                 usuario.getId(),
                 usuario.getTenant() != null ? usuario.getTenant().getId() : null,
+                usuario.getNombreCompleto(),
                 usuario.getEmail(),
                 usuario.getRol().getNombre(),
                 usuario.getActivo(),

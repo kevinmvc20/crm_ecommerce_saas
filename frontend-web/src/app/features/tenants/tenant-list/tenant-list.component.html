@@ -224,17 +224,18 @@
                   }
                 </td>
 
-                <!-- Acciones -->
+                <!-- Acciones — ▶ CONECTADO a abrirDetallesTenant -->
                 <td class="whitespace-nowrap pl-3 pr-5 py-4 text-right">
                   <button
                     type="button"
                     class="rounded-lg px-3 py-1.5 text-xs font-medium
                            text-slate-500 ring-1 ring-slate-200
                            transition-all duration-150
-                           hover:bg-slate-50 hover:text-slate-800
+                           hover:bg-brand-primary/10 hover:text-brand-primary hover:ring-brand-primary/40
                            focus-visible:outline focus-visible:outline-2
                            focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-                    [attr.aria-label]="'Ver detalles de ' + tenant.nombreComercial">
+                    [attr.aria-label]="'Ver detalles de ' + tenant.nombreComercial"
+                    (click)="abrirDetallesTenant(tenant)">
                     Ver detalles
                   </button>
                 </td>
@@ -540,4 +541,464 @@
 
     </div><!-- /modal-card -->
   </div><!-- /backdrop -->
+}
+
+
+<!-- ════════════════════════════════════════════════════════════
+     DRAWER / MODAL — Detalles de Empresa & Gestión de Usuarios
+     ════════════════════════════════════════════════════════════ -->
+@if (isUserModalOpen() && selectedTenant()) {
+  <!-- Backdrop -->
+  <div
+    id="drawer-backdrop"
+    class="fixed inset-0 z-50 flex items-start justify-end
+           bg-slate-900/50 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="drawer-titulo"
+    (click)="cerrarDetallesTenant()">
+
+    <!-- Panel lateral -->
+    <div
+      id="drawer-panel"
+      class="relative flex h-full w-full max-w-xl flex-col
+             bg-white shadow-2xl ring-1 ring-slate-200
+             overflow-hidden"
+      (click)="$event.stopPropagation()">
+
+      <!-- ══ CABECERA DEL DRAWER ══ -->
+      <div class="flex items-start justify-between
+                  border-b border-slate-100 bg-gradient-to-r
+                  from-brand-primary/5 to-blue-600/5
+                  px-6 py-5">
+        <div class="flex items-center gap-4">
+          <!-- Avatar grande de la empresa -->
+          <div class="flex h-12 w-12 shrink-0 items-center justify-center
+                      rounded-2xl bg-gradient-to-br from-brand-primary to-blue-600
+                      text-lg font-bold text-white shadow-md">
+            {{ selectedTenant()!.nombreComercial[0].toUpperCase() }}
+          </div>
+          <div>
+            <h2 id="drawer-titulo"
+                class="text-base font-bold text-slate-900">
+              {{ selectedTenant()!.nombreComercial }}
+            </h2>
+            <div class="mt-1 flex items-center gap-2">
+              <!-- Subdominio -->
+              <span class="inline-flex items-center gap-1 rounded-full
+                           bg-slate-100 px-2.5 py-0.5 text-xs font-mono
+                           font-medium text-slate-600 ring-1 ring-slate-200">
+                {{ selectedTenant()!.subdominio }}.saas.com
+              </span>
+              <!-- Badge del plan -->
+              <span class="inline-flex items-center rounded-full
+                           bg-violet-100 px-2.5 py-0.5 text-xs font-semibold
+                           text-violet-700 ring-1 ring-violet-300">
+                {{ selectedTenant()!.planNombre }}
+              </span>
+              <!-- Badge del estado -->
+              <span
+                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5
+                       text-xs font-semibold ring-1"
+                [ngClass]="estadoBadgeClass(selectedTenant()!.estadoSuscripcion)">
+                <span class="inline-block h-1.5 w-1.5 rounded-full bg-current"
+                      aria-hidden="true"></span>
+                {{ selectedTenant()!.estadoSuscripcion }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botón cerrar -->
+        <button
+          id="btn-cerrar-drawer"
+          type="button"
+          class="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+                 text-slate-400 transition-colors
+                 hover:bg-slate-100 hover:text-slate-600
+                 focus-visible:outline focus-visible:outline-2
+                 focus-visible:outline-offset-1 focus-visible:outline-brand-primary"
+          (click)="cerrarDetallesTenant()"
+          aria-label="Cerrar panel de detalles">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ══ CUERPO SCROLLABLE DEL DRAWER ══ -->
+      <div class="flex-1 overflow-y-auto">
+
+        <!-- ── Sección: Lista de usuarios actuales ── -->
+        <section aria-labelledby="seccion-equipo-titulo" class="px-6 py-5">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h3 id="seccion-equipo-titulo"
+                  class="text-sm font-semibold text-slate-800">
+                Equipo de trabajo
+              </h3>
+              <p class="mt-0.5 text-xs text-slate-400">
+                Usuarios internos con acceso a la plataforma de esta empresa.
+              </p>
+            </div>
+            @if (!isLoadingUsuarios()) {
+              <span class="inline-flex items-center justify-center rounded-full
+                           bg-slate-100 px-2.5 py-0.5 text-xs font-semibold
+                           text-slate-600 ring-1 ring-slate-200">
+                {{ tenantUsuarios().length }}
+              </span>
+            }
+          </div>
+
+          <!-- Skeleton de usuarios -->
+          @if (isLoadingUsuarios()) {
+            <div class="space-y-2.5">
+              @for (s of [1, 2, 3]; track s) {
+                <div class="flex animate-pulse items-center gap-3 rounded-xl
+                            border border-slate-100 bg-slate-50 px-4 py-3">
+                  <div class="h-8 w-8 rounded-full bg-slate-200"></div>
+                  <div class="flex-1 space-y-1.5">
+                    <div class="h-3 w-40 rounded bg-slate-200"></div>
+                    <div class="h-2.5 w-28 rounded bg-slate-100"></div>
+                  </div>
+                  <div class="h-5 w-20 rounded-full bg-slate-200"></div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Error al cargar usuarios -->
+          @if (!isLoadingUsuarios() && userErrorMessage() && tenantUsuarios().length === 0) {
+            <div role="alert"
+                 class="flex items-start gap-3 rounded-xl border border-red-200
+                        bg-red-50 px-4 py-3 text-xs text-red-700">
+              <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
+                   stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+              </svg>
+              {{ userErrorMessage() }}
+            </div>
+          }
+
+          <!-- Estado vacío — sin usuarios -->
+          @if (!isLoadingUsuarios() && tenantUsuarios().length === 0 && !userErrorMessage()) {
+            <div class="flex flex-col items-center justify-center rounded-xl
+                        border border-dashed border-slate-200 bg-slate-50
+                        py-10 text-center">
+              <div class="mb-3 flex h-12 w-12 items-center justify-center
+                          rounded-full bg-slate-200">
+                <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
+                </svg>
+              </div>
+              <p class="text-sm font-medium text-slate-700">Sin usuarios registrados</p>
+              <p class="mt-1 max-w-xs text-xs text-slate-400">
+                Esta empresa aún no tiene miembros. Usa el formulario de abajo para dar de alta el primer usuario.
+              </p>
+            </div>
+          }
+
+          <!-- Tabla compacta de usuarios -->
+          @if (!isLoadingUsuarios() && tenantUsuarios().length > 0) {
+            <div class="overflow-hidden rounded-xl border border-slate-200">
+              <table class="min-w-full divide-y divide-slate-100"
+                     aria-label="Usuarios de la empresa">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th scope="col"
+                        class="py-2.5 pl-4 pr-3 text-left text-xs font-semibold
+                               uppercase tracking-wider text-slate-500">
+                      Miembro
+                    </th>
+                    <th scope="col"
+                        class="px-3 py-2.5 text-left text-xs font-semibold
+                               uppercase tracking-wider text-slate-500">
+                      Rol
+                    </th>
+                    <th scope="col"
+                        class="px-3 py-2.5 text-left text-xs font-semibold
+                               uppercase tracking-wider text-slate-500">
+                      Estado
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                  @for (usuario of tenantUsuarios(); track usuario.id) {
+                    <tr class="transition-colors duration-75 hover:bg-slate-50">
+                      <!-- Nombre + Email -->
+                      <td class="py-3 pl-4 pr-3">
+                        <div class="flex items-center gap-2.5">
+                          <!-- Avatar inicial -->
+                          <div class="flex h-7 w-7 shrink-0 items-center justify-center
+                                      rounded-full bg-gradient-to-br
+                                      from-violet-500 to-blue-500
+                                      text-xs font-bold text-white">
+                            {{ (usuario.nombreCompleto?.charAt(0) || 'U').toUpperCase() }}
+                          </div>
+                          <div class="min-w-0">
+                            <p class="truncate text-xs font-semibold text-slate-900">
+                              {{ usuario.nombreCompleto || '—' }}
+                            </p>
+                            <p class="truncate text-xs text-slate-400">
+                              {{ usuario.email }}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <!-- Rol -->
+                      <td class="whitespace-nowrap px-3 py-3">
+                        <span
+                          class="inline-flex items-center rounded-full px-2 py-0.5
+                                 text-xs font-semibold ring-1"
+                          [ngClass]="rolBadgeClass(usuario.rolNombre)">
+                          {{ rolLabel(usuario.rolNombre) }}
+                        </span>
+                      </td>
+                      <!-- Activo -->
+                      <td class="whitespace-nowrap px-3 py-3">
+                        @if (usuario.activo) {
+                          <span class="inline-flex items-center gap-1 text-xs
+                                       font-medium text-emerald-700">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                  aria-hidden="true"></span>
+                            Activo
+                          </span>
+                        } @else {
+                          <span class="inline-flex items-center gap-1 text-xs
+                                       font-medium text-slate-400">
+                            <span class="h-1.5 w-1.5 rounded-full bg-slate-300"
+                                  aria-hidden="true"></span>
+                            Inactivo
+                          </span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <!-- Divisor decorativo -->
+        <div class="mx-6 border-t border-dashed border-slate-200"></div>
+
+        <!-- ── Sección: Agregar miembro / administrador ── -->
+        <section aria-labelledby="seccion-nuevo-usuario-titulo" class="px-6 py-5">
+          <div class="mb-4">
+            <h3 id="seccion-nuevo-usuario-titulo"
+                class="text-sm font-semibold text-slate-800">
+              Agregar miembro / administrador
+            </h3>
+            <p class="mt-0.5 text-xs text-slate-400">
+              Crea un nuevo usuario con acceso a la cuenta de esta empresa.
+            </p>
+          </div>
+
+          <!-- Alerta de éxito -->
+          @if (userSuccessMessage()) {
+            <div role="status"
+                 class="mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-200
+                        bg-emerald-50 px-3.5 py-3 text-xs text-emerald-700">
+              <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
+                   stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ userSuccessMessage() }}
+            </div>
+          }
+
+          <!-- Alerta de error -->
+          @if (userErrorMessage() && tenantUsuarios().length > 0) {
+            <div role="alert"
+                 class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200
+                        bg-red-50 px-3.5 py-3 text-xs text-red-700">
+              <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
+                   stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+              </svg>
+              {{ userErrorMessage() }}
+            </div>
+          }
+
+          <!-- Formulario de nuevo usuario -->
+          <form
+            id="form-nuevo-usuario"
+            [formGroup]="usuarioForm"
+            (ngSubmit)="onSubmitCrearUsuario()"
+            class="space-y-4"
+            novalidate>
+
+            <!-- Nombre completo -->
+            <div>
+              <label for="input-nombre-completo"
+                     class="block text-xs font-medium text-slate-700">
+                Nombre completo <span class="text-red-500" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="input-nombre-completo"
+                type="text"
+                formControlName="nombreCompleto"
+                placeholder="Ej: María García López"
+                autocomplete="name"
+                class="mt-1 block w-full rounded-xl border border-slate-200
+                       bg-white px-3.5 py-2.5 text-sm text-slate-900
+                       shadow-sm placeholder:text-slate-400
+                       transition-all duration-150
+                       hover:border-slate-300
+                       focus:border-brand-primary focus:outline-none focus:ring-2
+                       focus:ring-brand-primary/20"
+                [class.border-red-400]="hasUserError('nombreCompleto', 'required')"
+                [attr.aria-invalid]="hasUserError('nombreCompleto', 'required')"
+                aria-describedby="error-nombre-completo"/>
+
+              @if (hasUserError('nombreCompleto', 'required')) {
+                <p id="error-nombre-completo" role="alert"
+                   class="mt-1 text-xs text-red-600">
+                  El nombre completo es obligatorio.
+                </p>
+              }
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label for="input-email-usuario"
+                     class="block text-xs font-medium text-slate-700">
+                Email <span class="text-red-500" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="input-email-usuario"
+                type="email"
+                formControlName="email"
+                placeholder="usuario@empresa.com"
+                autocomplete="email"
+                class="mt-1 block w-full rounded-xl border border-slate-200
+                       bg-white px-3.5 py-2.5 text-sm text-slate-900
+                       shadow-sm placeholder:text-slate-400
+                       transition-all duration-150
+                       hover:border-slate-300
+                       focus:border-brand-primary focus:outline-none focus:ring-2
+                       focus:ring-brand-primary/20"
+                [class.border-red-400]="hasUserError('email', 'required') || hasUserError('email', 'email')"
+                [attr.aria-invalid]="hasUserError('email', 'required') || hasUserError('email', 'email')"
+                aria-describedby="error-email-usuario"/>
+
+              @if (hasUserError('email', 'required')) {
+                <p id="error-email-usuario" role="alert"
+                   class="mt-1 text-xs text-red-600">
+                  El email es obligatorio.
+                </p>
+              } @else if (hasUserError('email', 'email')) {
+                <p id="error-email-usuario" role="alert"
+                   class="mt-1 text-xs text-red-600">
+                  Introduce un email válido.
+                </p>
+              }
+            </div>
+
+            <!-- Contraseña -->
+            <div>
+              <label for="input-password-usuario"
+                     class="block text-xs font-medium text-slate-700">
+                Contraseña <span class="text-red-500" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="input-password-usuario"
+                type="password"
+                formControlName="password"
+                placeholder="Mínimo 6 caracteres"
+                autocomplete="new-password"
+                class="mt-1 block w-full rounded-xl border border-slate-200
+                       bg-white px-3.5 py-2.5 text-sm text-slate-900
+                       shadow-sm placeholder:text-slate-400
+                       transition-all duration-150
+                       hover:border-slate-300
+                       focus:border-brand-primary focus:outline-none focus:ring-2
+                       focus:ring-brand-primary/20"
+                [class.border-red-400]="hasUserError('password', 'required') || hasUserError('password', 'minlength')"
+                [attr.aria-invalid]="hasUserError('password', 'required') || hasUserError('password', 'minlength')"
+                aria-describedby="error-password-usuario"/>
+
+              @if (hasUserError('password', 'required')) {
+                <p id="error-password-usuario" role="alert"
+                   class="mt-1 text-xs text-red-600">
+                  La contraseña es obligatoria.
+                </p>
+              } @else if (hasUserError('password', 'minlength')) {
+                <p id="error-password-usuario" role="alert"
+                   class="mt-1 text-xs text-red-600">
+                  La contraseña debe tener al menos 6 caracteres.
+                </p>
+              }
+            </div>
+
+            <!-- Selector de rol -->
+            <div>
+              <label for="select-rol-usuario"
+                     class="block text-xs font-medium text-slate-700">
+                Rol <span class="text-red-500" aria-hidden="true">*</span>
+              </label>
+              <select
+                id="select-rol-usuario"
+                formControlName="rolNombre"
+                class="mt-1 block w-full appearance-none rounded-xl border border-slate-200
+                       bg-white px-3.5 py-2.5 text-sm text-slate-900
+                       shadow-sm transition-all duration-150
+                       hover:border-slate-300
+                       focus:border-brand-primary focus:outline-none focus:ring-2
+                       focus:ring-brand-primary/20">
+                <option value="ROLE_ADMIN_EMPRESA">Admin Empresa</option>
+                <option value="ROLE_VENDEDOR">Vendedor</option>
+              </select>
+              <p class="mt-1 text-xs text-slate-400">
+                Admin Empresa puede gestionar la configuración. Vendedor tiene acceso solo a ventas.
+              </p>
+            </div>
+
+            <!-- Botón de submit con feedback -->
+            <button
+              id="btn-crear-usuario"
+              type="submit"
+              class="inline-flex w-full items-center justify-center gap-2
+                     rounded-xl bg-brand-primary px-4 py-2.5
+                     text-sm font-semibold text-white shadow-sm
+                     transition-opacity duration-150 hover:opacity-90
+                     focus-visible:outline focus-visible:outline-2
+                     focus-visible:outline-offset-2 focus-visible:outline-brand-primary
+                     active:scale-95
+                     disabled:cursor-not-allowed disabled:opacity-60"
+              [disabled]="isCreatingUser()"
+              [attr.aria-busy]="isCreatingUser()">
+
+              @if (isCreatingUser()) {
+                <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"
+                     aria-hidden="true">
+                  <circle class="opacity-25" cx="12" cy="12" r="10"
+                          stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Creando usuario…
+              } @else {
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
+                </svg>
+                Agregar usuario
+              }
+            </button>
+
+          </form>
+        </section>
+
+      </div><!-- /body scrollable -->
+    </div><!-- /drawer-panel -->
+  </div><!-- /drawer-backdrop -->
 }

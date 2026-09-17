@@ -10,6 +10,21 @@ interface NavItem {
   icon: 'dashboard' | 'crm' | 'catalog' | 'orders' | 'settings';
 }
 
+// ─── Catálogos de ítems por rol ───────────────────────────────────────────────
+
+const NAV_SUPER_ADMIN: NavItem[] = [
+  { label: 'Dashboard',     route: '/admin/dashboard', icon: 'dashboard' },
+  { label: 'Empresas SaaS', route: '/admin/tenants',   icon: 'crm'       },
+  { label: 'Configuración', route: '/admin/config',    icon: 'settings'  },
+];
+
+const NAV_TENANT: NavItem[] = [
+  { label: 'Dashboard',        route: '/admin/dashboard', icon: 'dashboard' },
+  { label: 'Catálogo & Stock', route: '/admin/catalogo',  icon: 'catalog'   },
+  { label: 'Ventas & Pedidos', route: '/admin/ventas',    icon: 'orders'    },
+  { label: 'Configuración',    route: '/admin/config',    icon: 'settings'  },
+];
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
@@ -36,6 +51,24 @@ export class AdminDashboardComponent {
   /** TenantId del usuario activo (null para SuperAdmin) */
   protected readonly currentTenant = this.authService.currentTenant;
 
+  // ──────────────────────────────────────────────────────
+  // Computed signals derivados del rol
+  // ──────────────────────────────────────────────────────
+
+  /** true cuando el usuario es SuperAdmin */
+  protected readonly isSuperAdmin = computed<boolean>(() =>
+    this.currentUser()?.rol === 'ROLE_SUPER_ADMIN'
+  );
+
+  /**
+   * Ítems del Sidebar según RBAC:
+   * - ROLE_SUPER_ADMIN → vista global (incluye "Empresas SaaS")
+   * - ROLE_ADMIN_EMPRESA / ROLE_VENDEDOR → vista de tenant (oculta "Empresas SaaS")
+   */
+  protected readonly menuItems = computed<NavItem[]>(() =>
+    this.isSuperAdmin() ? NAV_SUPER_ADMIN : NAV_TENANT
+  );
+
   /** Nombre del workspace según rol y tenant */
   protected readonly workspaceName = computed<string>(() => {
     const user = this.currentUser();
@@ -44,33 +77,16 @@ export class AdminDashboardComponent {
     return user.nombreTenant ?? 'Panel Administrativo';
   });
 
-  /** Badge del rol legible */
+  /** Etiqueta legible para el badge de rol */
   protected readonly roleLabel = computed<string>(() => {
     const rol = this.currentUser()?.rol ?? '';
     const labels: Record<string, string> = {
-      ROLE_SUPER_ADMIN: 'Super Admin',
-      ROLE_ADMIN: 'Admin',
-      ROLE_USER: 'Usuario',
+      ROLE_SUPER_ADMIN:   'Super Admin',
+      ROLE_ADMIN_EMPRESA: 'Admin Empresa',
+      ROLE_VENDEDOR:      'Vendedor',
     };
     return labels[rol] ?? rol;
   });
-
-  /** true cuando el usuario es SuperAdmin */
-  protected readonly isSuperAdmin = computed<boolean>(() =>
-    this.currentUser()?.rol === 'ROLE_SUPER_ADMIN'
-  );
-
-  // ──────────────────────────────────────────────────────
-  // Navegación lateral
-  // ──────────────────────────────────────────────────────
-  protected readonly navItems: NavItem[] = [
-    { label: 'Dashboard',        route: '/admin/dashboard', icon: 'dashboard' },
-    { label: 'Empresas SaaS',    route: '/admin/tenants',   icon: 'crm'       },
-    { label: 'Catálogo & Stock', route: '/admin/catalog',   icon: 'catalog'   },
-    { label: 'Ventas & Pedidos', route: '/admin/orders',    icon: 'orders'    },
-    { label: 'Configuración',    route: '/admin/settings',  icon: 'settings'  },
-  ];
-
 
   // ──────────────────────────────────────────────────────
   // Acciones

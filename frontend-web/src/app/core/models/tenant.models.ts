@@ -32,3 +32,28 @@ export interface TenantCreateRequest {
   subdominio: string;
   planSaaSId: number;
 }
+
+/**
+ * Usuario interno de un tenant, devuelto por
+ * GET /api/v1/tenants/{tenantId}/usuarios
+ */
+export interface UsuarioTenant {
+  id: string;
+  tenantId: string;
+  nombreCompleto: string;
+  email: string;
+  rolNombre: string;
+  activo: boolean;
+  createdAt: string;
+}
+
+/**
+ * Payload enviado al endpoint POST /api/v1/tenants/{tenantId}/usuarios
+ * para dar de alta un usuario interno en una empresa.
+ */
+export interface UsuarioTenantCreateRequest {
+  nombreCompleto: string;
+  email: string;
+  password: string;
+  rolNombre: string;
+}
