@@ -13,6 +13,7 @@ import { finalize } from 'rxjs';
 import { LeadService } from '../../../../core/services/lead.service';
 import { TenantService } from '../../../../core/services/tenant.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { InteraccionCrmService } from '../../../../core/services/interaccion-crm.service';
 import { UsuarioTenant } from '../../../../core/models/tenant.models';
 import {
   EstadoLead,
@@ -20,6 +21,7 @@ import {
   LeadCalificarRequest,
   LeadConvertirRequest,
   LeadCreateRequest,
+  InteraccionCRM,
 } from '../../../../core/models/crm.models';
 
 // ─── Validador de grupo: al menos email o teléfono ───────────────────────────
@@ -53,6 +55,7 @@ export class LeadListComponent implements OnInit {
   private readonly leadService = inject(LeadService);
   private readonly tenantService = inject(TenantService);
   protected readonly authService = inject(AuthService);
+  private readonly interaccionService = inject(InteraccionCrmService);
   private readonly fb = inject(FormBuilder);
 
   // ─────────────────────────────────────────────────────
@@ -135,6 +138,26 @@ export class LeadListComponent implements OnInit {
 
   readonly asignarForm: FormGroup = this.fb.group({
     vendedorId: [null],
+  });
+
+  // ─────────────────────────────────────────────────────
+  // Modal: Bitácora de Seguimiento Comercial
+  // ─────────────────────────────────────────────────────
+  readonly isBitacoraModalOpen = signal<boolean>(false);
+  readonly leadSeleccionadoBitacora = signal<Lead | null>(null);
+  readonly interacciones = signal<InteraccionCRM[]>([]);
+  readonly isLoadingInteracciones = signal<boolean>(false);
+  readonly isSubmittingInteraccion = signal<boolean>(false);
+  readonly bitacoraError = signal<string | null>(null);
+
+  /**
+   * Formulario para registrar una nueva actividad en la bitácora.
+   * - tipo: LLAMADA por defecto, requerido.
+   * - descripcion: requerida, mínimo 5 caracteres.
+   */
+  readonly interaccionForm: FormGroup = this.fb.group({
+    tipo: ['LLAMADA', Validators.required],
+    descripcion: ['', [Validators.required, Validators.minLength(5)]],
   });
 
   // ─────────────────────────────────────────────────────
@@ -412,6 +435,83 @@ export class LeadListComponent implements OnInit {
   }
 
   // ─────────────────────────────────────────────────────
+  // Modal: Bitácora de Seguimiento Comercial
+  // ─────────────────────────────────────────────────────
+
+  /** Abre la bitácora del lead y carga su historial desde el backend. */
+  abrirBitacoraModal(lead: Lead): void {
+    this.leadSeleccionadoBitacora.set(lead);
+    this.interacciones.set([]);
+    this.bitacoraError.set(null);
+    this.interaccionForm.reset({ tipo: 'LLAMADA', descripcion: '' });
+    this.isBitacoraModalOpen.set(true);
+
+    this.isLoadingInteracciones.set(true);
+    this.interaccionService
+      .getInteraccionesPorLead(lead.id)
+      .pipe(finalize(() => this.isLoadingInteracciones.set(false)))
+      .subscribe({
+        next: (data) => this.interacciones.set(data),
+        error: () => this.bitacoraError.set('No se pudo cargar el historial de actividades.'),
+      });
+  }
+
+  /** Cierra la bitácora y limpia el estado. */
+  cerrarBitacoraModal(): void {
+    this.isBitacoraModalOpen.set(false);
+    this.leadSeleccionadoBitacora.set(null);
+    this.interacciones.set([]);
+  }
+
+  /** Envía una nueva interacción y aplica la transición de estado reactiva. */
+  onSubmitInteraccion(): void {
+    if (this.interaccionForm.invalid) {
+      this.interaccionForm.markAllAsTouched();
+      return;
+    }
+
+    const lead = this.leadSeleccionadoBitacora();
+    if (!lead) return;
+
+    const estadoAntes = lead.estado;
+    const payload = this.interaccionForm.value;
+    this.isSubmittingInteraccion.set(true);
+    this.bitacoraError.set(null);
+
+    this.interaccionService
+      .crearInteraccionLead(lead.id, payload)
+      .pipe(finalize(() => this.isSubmittingInteraccion.set(false)))
+      .subscribe({
+        next: (nueva) => {
+          // Agregar la nueva interacción al inicio del historial
+          this.interacciones.update((list) => [nueva, ...list]);
+
+          // Actualizar reactivamente el estado del lead en la tabla principal
+          if (estadoAntes === 'NUEVO') {
+            this.leads.update((list) =>
+              list.map((l) =>
+                l.id === lead.id ? { ...l, estado: 'CONTACTADO' as EstadoLead } : l
+              )
+            );
+            // También actualizamos el lead en el signal del modal
+            this.leadSeleccionadoBitacora.update((l) =>
+              l ? { ...l, estado: 'CONTACTADO' as EstadoLead } : l
+            );
+          }
+
+          // Resetear sólo el textarea; conservar el tipo seleccionado
+          this.interaccionForm.patchValue({ descripcion: '' });
+          this.interaccionForm.get('descripcion')?.markAsUntouched();
+        },
+        error: (err) => {
+          this.bitacoraError.set(
+            err?.error?.message ?? 'Error al registrar la actividad.'
+          );
+        },
+      });
+  }
+
+  // ─────────────────────────────────────────────────────
   // Helpers de plantilla
   // ─────────────────────────────────────────────────────
 
@@ -574,5 +674,71 @@ export class LeadListComponent implements OnInit {
       lead.estado !== 'CONVERTIDO' &&
       lead.estado !== 'DESCALIFICADO'
     );
+  }
+
+  /**
+   * Muestra el botón de bitácora para cualquier lead que no esté en estado
+   * terminal (CONVERTIDO o DESCALIFICADO).
+   */
+  puedeVerBitacora(lead: Lead): boolean {
+    return lead.estado !== 'CONVERTIDO' && lead.estado !== 'DESCALIFICADO';
+  }
+
+  /** Verifica si un control del interaccionForm tiene error visible */
+  hasBitacoraError(control: string, error: string): boolean {
+    const c = this.interaccionForm.get(control);
+    return !!(c && c.touched && c.hasError(error));
+  }
+
+  /** Clases CSS del badge del tipo de interacción para el timeline */
+  tipoBadgeClass(tipo: string): string {
+    const map: Record<string, string> = {
+      LLAMADA: 'bg-blue-100 text-blue-700 ring-blue-200',
+      CORREO:  'bg-violet-100 text-violet-700 ring-violet-200',
+      REUNION: 'bg-amber-100 text-amber-700 ring-amber-200',
+      NOTA:    'bg-slate-100 text-slate-600 ring-slate-200',
+    };
+    return map[tipo] ?? 'bg-slate-100 text-slate-600 ring-slate-200';
+  }
+
+  /** Ícono SVG path del tipo de interacción */
+  tipoIconPath(tipo: string): string {
+    const map: Record<string, string> = {
+      LLAMADA: 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z',
+      CORREO:  'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75',
+      REUNION: 'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z',
+      NOTA:    'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
+    };
+    return map[tipo] ?? map['NOTA'];
+  }
+
+  /** Etiqueta legible del tipo de interacción */
+  tipoLabel(tipo: string): string {
+    const map: Record<string, string> = {
+      LLAMADA: 'Llamada',
+      CORREO:  'Correo',
+      REUNION: 'Reunión',
+      NOTA:    'Nota',
+    };
+    return map[tipo] ?? tipo;
+  }
+
+  /**
+   * Convierte una fecha ISO a una cadena relativa legible.
+   * Ej.: "hace 5 minutos", "hace 2 días".
+   */
+  fechaRelativa(isoDate: string): string {
+    const diff = Date.now() - new Date(isoDate).getTime();
+    const segundos = Math.floor(diff / 1000);
+    if (segundos < 60)  return 'hace un momento';
+    const minutos = Math.floor(segundos / 60);
+    if (minutos < 60)   return `hace ${minutos} min`;
+    const horas = Math.floor(minutos / 60);
+    if (horas < 24)     return `hace ${horas} h`;
+    const dias = Math.floor(horas / 24);
+    if (dias < 30)      return `hace ${dias} día${dias !== 1 ? 's' : ''}`;
+    const meses = Math.floor(dias / 30);
+    if (meses < 12)     return `hace ${meses} mes${meses !== 1 ? 'es' : ''}`;
+    return `hace ${Math.floor(meses / 12)} año${Math.floor(meses / 12) !== 1 ? 's' : ''}`;
   }
 }

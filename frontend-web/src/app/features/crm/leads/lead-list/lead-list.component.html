@@ -219,6 +219,22 @@
                 </button>
                 }
 
+                <!-- ── Botón Seguimiento / Bitácora ──────────────────────────── -->
+                @if (puedeVerBitacora(lead)) {
+                <button type="button" [id]="'btn-bitacora-' + lead.id" (click)="abrirBitacoraModal(lead)"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-teal-200
+                                 bg-teal-50 px-2.5 py-1.5 text-xs font-medium text-teal-700
+                                 transition-all duration-150 hover:bg-teal-100 hover:border-teal-300"
+                  [attr.aria-label]="'Ver bitácora de seguimiento de ' + lead.nombre">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                  </svg>
+                  Seguimiento
+                </button>
+                }
+
                 <!-- Calificar (solo si tiene vendedor) -->
                 @if (puedeCalificar(lead)) {
                 <button type="button" [id]="'btn-calificar-' + lead.id" (click)="abrirCalificarModal(lead)" class="inline-flex items-center gap-1.5 rounded-lg border border-violet-200
@@ -881,6 +897,246 @@
         </button>
       </div>
     </form>
+
+  </div>
+</div>
+}
+
+<!-- ════════════════════════════════════════════════════════════════════
+     MODAL: BITÁCORA DE SEGUIMIENTO COMERCIAL
+     ════════════════════════════════════════════════════════════════════ -->
+@if (isBitacoraModalOpen()) {
+<!-- Backdrop -->
+<div class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm" (click)="cerrarBitacoraModal()" aria-hidden="true"></div>
+
+<!-- Panel -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true"
+  aria-labelledby="modal-bitacora-titulo">
+  <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200
+              animate-[fadeInScale_0.15s_ease-out] flex flex-col max-h-[90vh]">
+
+    <!-- ── Encabezado ─────────────────────────────────────────────────────── -->
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+          <svg class="h-5 w-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+          </svg>
+        </div>
+        <div>
+          <h2 id="modal-bitacora-titulo" class="text-base font-semibold text-slate-900">
+            Bitácora de Seguimiento Comercial
+          </h2>
+          @if (leadSeleccionadoBitacora()) {
+          <div class="flex items-center gap-2 mt-0.5">
+            <p class="text-xs text-slate-500">{{ leadSeleccionadoBitacora()!.nombre }}</p>
+            <span class="inline-flex items-center rounded-full px-2 py-px text-[10px] font-semibold ring-1"
+              [ngClass]="estadoBadgeClass(leadSeleccionadoBitacora()!.estado)">
+              {{ estadoLabel(leadSeleccionadoBitacora()!.estado) }}
+            </span>
+          </div>
+          }
+        </div>
+      </div>
+      <button type="button" (click)="cerrarBitacoraModal()"
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400
+                       transition hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar bitácora">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Cuerpo (scrollable) ────────────────────────────────────────────── -->
+    <div class="flex-1 overflow-y-auto">
+
+      <!-- ── SECCIÓN SUPERIOR: Formulario de nueva actividad ──────────────── -->
+      <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/60">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
+          Registrar nueva actividad
+        </p>
+
+        <form [formGroup]="interaccionForm" (ngSubmit)="onSubmitInteraccion()" novalidate>
+          <div class="flex flex-col gap-3">
+
+            <!-- Selector de tipo con badges de color -->
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Tipo de actividad">
+              @for (t of ['LLAMADA', 'CORREO', 'REUNION', 'NOTA']; track t) {
+              <label [for]="'tipo-' + t"
+                class="cursor-pointer flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium
+                             transition-all duration-150 select-none"
+                [ngClass]="interaccionForm.get('tipo')?.value === t
+                  ? tipoBadgeClass(t) + ' ring-1'
+                  : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'">
+                <input [id]="'tipo-' + t" type="radio" formControlName="tipo" [value]="t" class="sr-only" />
+                <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="tipoIconPath(t)" />
+                </svg>
+                {{ tipoLabel(t) }}
+              </label>
+              }
+            </div>
+
+            <!-- Descripción + botón de enviar en fila -->
+            <div class="flex gap-3 items-start">
+              <div class="flex-1">
+                <textarea id="bitacora-descripcion" formControlName="descripcion" rows="2"
+                  placeholder="Describe brevemente la actividad realizada…"
+                  class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+                               text-slate-900 placeholder-slate-400 shadow-sm resize-none transition
+                               focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                  [class.border-red-400]="hasBitacoraError('descripcion', 'required') || hasBitacoraError('descripcion', 'minlength')"
+                  aria-label="Descripción de la actividad"></textarea>
+                @if (hasBitacoraError('descripcion', 'required')) {
+                <p class="mt-1 text-xs text-red-600">La descripción es requerida.</p>
+                }
+                @if (hasBitacoraError('descripcion', 'minlength')) {
+                <p class="mt-1 text-xs text-red-600">Mínimo 5 caracteres.</p>
+                }
+              </div>
+              <!-- Botón registrar -->
+              <button id="btn-submit-interaccion" type="submit"
+                [disabled]="interaccionForm.invalid || isSubmittingInteraccion()"
+                class="flex shrink-0 items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold
+                               text-white shadow-sm transition hover:bg-teal-700
+                               disabled:cursor-not-allowed disabled:opacity-50">
+                @if (isSubmittingInteraccion()) {
+                <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Guardando…
+                } @else {
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+                  aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Registrar
+                }
+              </button>
+            </div>
+
+            <!-- Error global del formulario -->
+            @if (bitacoraError()) {
+            <div class="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"
+              role="alert">
+              <svg class="h-4 w-4 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+              {{ bitacoraError() }}
+            </div>
+            }
+
+          </div>
+        </form>
+      </div>
+
+      <!-- ── SECCIÓN INFERIOR: Timeline del historial ──────────────────────── -->
+      <div class="px-6 py-5">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
+          Historial de actividades
+        </p>
+
+        <!-- Estado de carga del historial -->
+        @if (isLoadingInteracciones()) {
+        <div class="flex items-center justify-center py-10 text-slate-400">
+          <svg class="mr-3 h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span class="text-sm">Cargando historial…</span>
+        </div>
+        }
+
+        <!-- Estado vacío -->
+        @if (!isLoadingInteracciones() && interacciones().length === 0) {
+        <div class="flex flex-col items-center justify-center py-10 text-center">
+          <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
+            <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="1.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+            </svg>
+          </div>
+          <p class="text-sm font-medium text-slate-600">Sin actividades registradas</p>
+          <p class="mt-1 text-xs text-slate-400">
+            Registra la primera actividad para comenzar el seguimiento comercial.
+          </p>
+        </div>
+        }
+
+        <!-- Timeline visual -->
+        @if (!isLoadingInteracciones() && interacciones().length > 0) {
+        <ol class="relative border-l border-slate-200 space-y-5 ml-3" aria-label="Historial de interacciones">
+          @for (item of interacciones(); track item.id) {
+          <li class="ml-5">
+            <!-- Punto del timeline con ícono del tipo -->
+            <span
+              class="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white"
+              [ngClass]="tipoBadgeClass(item.tipo)">
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+                aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="tipoIconPath(item.tipo)" />
+              </svg>
+            </span>
+
+            <!-- Tarjeta del evento -->
+            <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm
+                              hover:shadow-md transition-shadow duration-200">
+              <!-- Fila de cabecera: tipo + fecha -->
+              <div class="flex items-center justify-between mb-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1"
+                  [ngClass]="tipoBadgeClass(item.tipo)">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="tipoIconPath(item.tipo)" />
+                  </svg>
+                  {{ tipoLabel(item.tipo) }}
+                </span>
+                <div class="text-right">
+                  <time class="text-xs text-slate-500"
+                    [attr.datetime]="item.fechaHora">
+                    {{ fechaRelativa(item.fechaHora) }}
+                  </time>
+                  <p class="text-[10px] text-slate-400">
+                    {{ item.fechaHora | date:'dd/MM/yyyy HH:mm' }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Descripción -->
+              <p class="text-sm text-slate-700 leading-relaxed">{{ item.descripcion }}</p>
+
+              <!-- Ejecutivo responsable -->
+              <div class="mt-3 flex items-center gap-1.5">
+                <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200
+                                  text-[9px] font-bold text-slate-600">
+                  {{ item.nombreEjecutivo ? item.nombreEjecutivo[0].toUpperCase() : '?' }}
+                </div>
+                <span class="text-xs text-slate-500">{{ item.nombreEjecutivo }}</span>
+              </div>
+            </div>
+          </li>
+          }
+        </ol>
+        }
+      </div>
+    </div>
+
+    <!-- ── Footer del modal ───────────────────────────────────────────────── -->
+    <div class="flex items-center justify-end border-t border-slate-100 px-6 py-4 shrink-0">
+      <button type="button" (click)="cerrarBitacoraModal()"
+        class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium
+                       text-slate-600 transition hover:bg-slate-50">
+        Cerrar
+      </button>
+    </div>
 
   </div>
 </div>

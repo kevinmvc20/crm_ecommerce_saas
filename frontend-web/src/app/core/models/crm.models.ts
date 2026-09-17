@@ -52,3 +52,35 @@ export interface LeadConvertirRequest {
   ciNit: string;
   razonSocialONombre: string;
 }
+
+// ─── Bitácora Comercial (InteraccionCRM) ──────────────────────────────────────
+
+/**
+ * Tipos de actividad registrables en la bitácora comercial.
+ * Debe coincidir con el enum TipoInteraccionCRM del backend.
+ */
+export type TipoInteraccion = 'LLAMADA' | 'CORREO' | 'REUNION' | 'NOTA';
+
+/**
+ * Representación pública de una interacción CRM devuelta por el backend.
+ * Mapea el record InteraccionResponse de Java.
+ */
+export interface InteraccionCRM {
+  id: string;
+  tenantId: string;
+  leadId: string | null;
+  clienteId: string | null;
+  ejecutivoId: string;
+  nombreEjecutivo: string;
+  tipo: TipoInteraccion;
+  descripcion: string;
+  fechaHora: string; // ISO-8601
+}
+
+/**
+ * Payload para POST /api/v1/crm/interacciones/lead/{leadId}.
+ */
+export interface InteraccionCreateRequest {
+  tipo: TipoInteraccion;
+  descripcion: string;
+}
