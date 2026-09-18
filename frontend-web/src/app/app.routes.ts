@@ -48,6 +48,14 @@ export const routes: Routes = [
                     ),
             },
             {
+                // /admin/crm/oportunidades — Tablero Kanban de Oportunidades Comerciales
+                path: 'crm/oportunidades',
+                loadComponent: () =>
+                    import('./features/crm/oportunidades/oportunidad-kanban/oportunidad-kanban.component').then(
+                        m => m.OportunidadKanbanComponent
+                    ),
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full',

@@ -84,3 +84,75 @@ export interface InteraccionCreateRequest {
   tipo: TipoInteraccion;
   descripcion: string;
 }
+
+// ─── Oportunidades Comerciales (Pipeline Kanban) ──────────────────────────────
+
+/**
+ * Etapas del pipeline de ventas para una Oportunidad.
+ * Debe coincidir con el enum EtapaOportunidad del backend.
+ */
+export type EtapaOportunidad =
+  | 'CALIFICACION'
+  | 'PROPUESTA'
+  | 'NEGOCIACION'
+  | 'GANADA'
+  | 'PERDIDA';
+
+/**
+ * Representación pública de una Oportunidad Comercial devuelta por el backend.
+ * Mapea el record OportunidadResponse de Java.
+ */
+export interface Oportunidad {
+  id: string;
+  clienteId: string;
+  razonSocialCliente: string;
+  vendedorId: string;
+  nombreVendedor: string;
+  /** Nombre del trato (alias de 'titulo' en la BD). */
+  nombre: string;
+  montoEstimado: number;
+  probabilidad: number;  // 0–100
+  etapa: EtapaOportunidad;
+  /** Solo presente cuando etapa === 'PERDIDA'. */
+  motivoPerdida: string | null;
+  fechaCierreEsperada: string | null; // ISO-8601 date
+  createdAt: string; // ISO-8601
+}
+
+/**
+ * Payload para POST /api/v1/crm/oportunidades.
+ */
+export interface OportunidadCreateRequest {
+  clienteId: string;
+  nombre: string;
+  montoEstimado: number;
+  probabilidad: number;
+  fechaCierreEsperada?: string; // ISO-8601 date YYYY-MM-DD
+}
+
+/**
+ * Payload para PATCH /api/v1/crm/oportunidades/{id}/etapa.
+ */
+export interface CambioEtapaRequest {
+  etapa: EtapaOportunidad;
+}
+
+/**
+ * Payload para PATCH /api/v1/crm/oportunidades/{id}/perdida.
+ */
+export interface CerrarPerdidaRequest {
+  motivo: string;
+}
+
+// ─── Clientes CRM ─────────────────────────────────────────────────────────────
+
+/**
+ * Representación pública de un Cliente devuelta por el backend.
+ * Mapea el record ClienteResponse de Java.
+ */
+export interface ClienteCRM {
+  id: string;
+  razonSocialONombre: string;
+  ciNit: string;
+  email: string | null;
+}

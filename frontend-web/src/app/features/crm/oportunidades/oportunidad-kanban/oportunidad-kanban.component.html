@@ -1,0 +1,736 @@
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║         CRM – Pipeline de Ventas (Tablero Kanban)               ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+<div class="flex h-full flex-col overflow-hidden bg-slate-50 font-sans">
+
+  <!-- ░░░░░░░ CABECERA ░░░░░░░ -->
+  <div class="shrink-0 border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+
+      <!-- Título + breadcrumb -->
+      <div>
+        <h1 class="text-xl font-bold text-slate-800">Pipeline de Ventas</h1>
+        <p class="mt-0.5 text-xs text-slate-500">
+          Gestiona tus oportunidades comerciales por etapa
+        </p>
+      </div>
+
+      <!-- Métricas rápidas -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Total activas -->
+        <div class="flex items-center gap-2 rounded-xl border border-slate-200
+                    bg-white px-4 py-2 shadow-sm">
+          <span class="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
+          <span class="text-xs text-slate-500">Activas</span>
+          <span class="text-sm font-bold text-slate-800">{{ totalActivas() }}</span>
+        </div>
+        <!-- Monto total activo -->
+        <div class="flex items-center gap-2 rounded-xl border border-slate-200
+                    bg-white px-4 py-2 shadow-sm">
+          <span class="inline-block h-2 w-2 rounded-full bg-violet-500"></span>
+          <span class="text-xs text-slate-500">Pipeline</span>
+          <span class="text-sm font-bold text-slate-800">
+            {{ formatMonto(montoTotalActivo()) }}
+          </span>
+        </div>
+        <!-- Ganados -->
+        <div class="flex items-center gap-2 rounded-xl border border-emerald-200
+                    bg-emerald-50 px-4 py-2 shadow-sm">
+          <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+          <span class="text-xs text-emerald-600">Ganados</span>
+          <span class="text-sm font-bold text-emerald-700">{{ totalGanados() }}</span>
+        </div>
+
+        <!-- Botón nueva oportunidad -->
+        <button
+          id="btn-nueva-oportunidad"
+          type="button"
+          (click)="abrirNuevoModal()"
+          class="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2
+                 text-sm font-semibold text-white shadow-md shadow-blue-500/30
+                 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg
+                 hover:shadow-blue-500/40 focus-visible:outline
+                 focus-visible:outline-2 focus-visible:outline-offset-2
+                 focus-visible:outline-blue-600">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+               stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+          </svg>
+          Nueva Oportunidad
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░░░░░░ LOADING ░░░░░░░ -->
+  @if (isLoading()) {
+    <div class="flex flex-1 items-center justify-center">
+      <div class="flex flex-col items-center gap-4">
+        <div class="h-12 w-12 animate-spin rounded-full border-4
+                    border-slate-200 border-t-blue-600"></div>
+        <p class="text-sm text-slate-500">Cargando pipeline…</p>
+      </div>
+    </div>
+  }
+
+  <!-- ░░░░░░░ ERROR ░░░░░░░ -->
+  @if (errorMessage() && !isLoading()) {
+    <div class="mx-6 mt-6 rounded-xl border border-red-200 bg-red-50 p-4">
+      <div class="flex items-start gap-3">
+        <svg class="h-5 w-5 shrink-0 text-red-500 mt-0.5" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+        </svg>
+        <p class="text-sm text-red-700">{{ errorMessage() }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- ░░░░░░░ TABLERO KANBAN ░░░░░░░ -->
+  @if (!isLoading()) {
+    <div class="flex flex-1 gap-4 overflow-x-auto px-6 py-5 pb-6">
+
+      @for (col of columns; track col.etapa) {
+        <div class="flex w-72 shrink-0 flex-col rounded-2xl border
+                    {{ col.colorBorder }} {{ col.colorBg }} shadow-sm
+                    transition-shadow duration-200 hover:shadow-md">
+
+          <!-- ── Header de columna ── -->
+          <div class="flex items-center justify-between rounded-t-2xl
+                      border-b {{ col.colorBorder }} px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 rounded-full {{ col.colorDot }}
+                           shadow-sm ring-2 ring-white"></span>
+              <h2 class="text-sm font-bold {{ col.colorHeader }}">{{ col.label }}</h2>
+              <!-- Conteo de tratos -->
+              <span class="ml-1 flex h-5 min-w-5 items-center justify-center
+                           rounded-full {{ col.colorBadge }} px-1.5
+                           text-xs font-semibold ring-1">
+                {{ getOpsPorEtapa(col.etapa).length }}
+              </span>
+            </div>
+            <!-- Monto total de la columna -->
+            <span class="text-xs font-semibold {{ col.colorHeader }} opacity-80">
+              {{ formatMonto(getMontoEtapa(col.etapa)) }}
+            </span>
+          </div>
+
+          <!-- ── Listado de tarjetas ── -->
+          <div class="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
+
+            @if (getOpsPorEtapa(col.etapa).length === 0) {
+              <!-- Estado vacío -->
+              <div class="flex flex-col items-center justify-center
+                          rounded-xl border-2 border-dashed border-slate-200
+                          py-8 text-center">
+                <svg class="h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
+                </svg>
+                <p class="mt-2 text-xs text-slate-400">Sin oportunidades</p>
+              </div>
+            }
+
+            @for (op of getOpsPorEtapa(col.etapa); track op.id) {
+              <!-- ── Tarjeta de oportunidad ── -->
+              <div
+                class="group relative flex flex-col rounded-xl border border-white
+                       bg-white p-4 shadow-sm ring-1 ring-slate-100
+                       transition-all duration-200
+                       hover:shadow-md hover:ring-2 hover:ring-blue-200"
+                [class.opacity-60]="isCardLoading(op.id)">
+
+                <!-- Spinner de carga -->
+                @if (isCardLoading(op.id)) {
+                  <div class="absolute inset-0 flex items-center justify-center
+                              rounded-xl bg-white/80 backdrop-blur-sm z-10">
+                    <div class="h-6 w-6 animate-spin rounded-full border-2
+                                border-slate-200 border-t-blue-600"></div>
+                  </div>
+                }
+
+                <!-- Encabezado tarjeta: nombre + botón detalle -->
+                <div class="flex items-start justify-between gap-2">
+                  <h3 class="flex-1 text-sm font-semibold leading-tight text-slate-800
+                             line-clamp-2 cursor-pointer hover:text-blue-600
+                             transition-colors"
+                      (click)="abrirDetalle(op)"
+                      [attr.title]="op.nombre">
+                    {{ op.nombre }}
+                  </h3>
+                  <!-- Badge probabilidad -->
+                  <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold
+                               ring-1 {{ probabilidadBadgeClass(op.probabilidad) }}">
+                    {{ op.probabilidad }}%
+                  </span>
+                </div>
+
+                <!-- Cliente -->
+                <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                  <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24"
+                       stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+                  </svg>
+                  <span class="truncate font-medium text-slate-600">
+                    {{ op.razonSocialCliente }}
+                  </span>
+                </div>
+
+                <!-- Monto -->
+                <div class="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
+                  <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24"
+                       stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/>
+                  </svg>
+                  <span class="font-semibold text-slate-700">
+                    {{ formatMonto(op.montoEstimado) }}
+                  </span>
+                </div>
+
+                <!-- Fecha de cierre esperada (si existe) -->
+                @if (op.fechaCierreEsperada) {
+                  <div class="mt-1.5 flex items-center gap-1.5 text-xs text-slate-400">
+                    <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5"/>
+                    </svg>
+                    <span>{{ formatFecha(op.fechaCierreEsperada) }}</span>
+                  </div>
+                }
+
+                <!-- Motivo de pérdida (solo para PERDIDA) -->
+                @if (op.etapa === 'PERDIDA' && op.motivoPerdida) {
+                  <div class="mt-2 rounded-lg border border-red-100 bg-red-50 px-2 py-1.5">
+                    <p class="text-xs text-red-600 line-clamp-2">
+                      <span class="font-semibold">Motivo:</span> {{ op.motivoPerdida }}
+                    </p>
+                  </div>
+                }
+
+                <!-- Separador + Botones de acción rápida -->
+                @if (!col.isTerminal) {
+                  <div class="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-3">
+
+                    <!-- Botón retroceder -->
+                    @if (etapaAnterior(op.etapa)) {
+                      <button
+                        type="button"
+                        [attr.id]="'btn-retroceder-' + op.id"
+                        (click)="avanzarEtapa(op, etapaAnterior(op.etapa)!)"
+                        [disabled]="isCardLoading(op.id)"
+                        class="flex h-7 flex-1 items-center justify-center gap-1
+                               rounded-lg border border-slate-200 bg-slate-50
+                               text-xs font-medium text-slate-500
+                               transition-all duration-150
+                               hover:border-slate-300 hover:bg-slate-100
+                               disabled:cursor-not-allowed disabled:opacity-40">
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                             stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15.75 19.5L8.25 12l7.5-7.5"/>
+                        </svg>
+                        {{ etapaLabel(etapaAnterior(op.etapa)!) }}
+                      </button>
+                    }
+
+                    <!-- Botón avanzar -->
+                    @if (etapaSiguiente(op.etapa); as siguiente) {
+                      <button
+                        type="button"
+                        [attr.id]="'btn-avanzar-' + op.id"
+                        (click)="avanzarEtapa(op, siguiente)"
+                        [disabled]="isCardLoading(op.id)"
+                        class="flex h-7 flex-1 items-center justify-center gap-1
+                               rounded-lg border border-blue-200 bg-blue-50
+                               text-xs font-semibold text-blue-700
+                               transition-all duration-150
+                               hover:border-blue-300 hover:bg-blue-100
+                               disabled:cursor-not-allowed disabled:opacity-40">
+                        @if (siguiente === 'GANADA') {
+                          <svg class="h-3 w-3 text-emerald-600" fill="none"
+                               viewBox="0 0 24 24" stroke="currentColor"
+                               stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          </svg>
+                        } @else {
+                          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                               stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                          </svg>
+                        }
+                        @if (siguiente === 'GANADA') {
+                          <span class="text-emerald-700">Ganada</span>
+                        } @else {
+                          {{ etapaLabel(siguiente) }}
+                        }
+                      </button>
+                    }
+
+                    <!-- Botón marcar como perdida -->
+                    <button
+                      type="button"
+                      [attr.id]="'btn-perdida-' + op.id"
+                      (click)="avanzarEtapa(op, 'PERDIDA')"
+                      [disabled]="isCardLoading(op.id)"
+                      class="flex h-7 w-7 shrink-0 items-center justify-center
+                             rounded-lg border border-red-200 bg-red-50
+                             text-red-500 transition-all duration-150
+                             hover:border-red-300 hover:bg-red-100
+                             disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Marcar como perdida">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                           stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                }
+
+                <!-- Etiqueta "terminal" para tarjetas cerradas -->
+                @if (col.isTerminal) {
+                  <div class="mt-3 flex items-center gap-1.5 border-t
+                              {{ col.colorBorder }} pt-3">
+                    <span class="flex items-center gap-1 text-xs
+                                 {{ col.colorHeader }} opacity-70">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                           stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+                      </svg>
+                      Trato cerrado
+                    </span>
+                  </div>
+                }
+
+              </div><!-- /card -->
+            }
+
+          </div><!-- /cards list -->
+        </div><!-- /column -->
+      }
+
+    </div><!-- /kanban board -->
+  }
+
+</div><!-- /main container -->
+
+
+<!-- ╔══════════════════════════════════╗
+     ║     MODAL: Nueva Oportunidad     ║
+     ╚══════════════════════════════════╝ -->
+@if (isNuevoModalOpen()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center
+              bg-slate-900/60 p-4 backdrop-blur-sm"
+       role="dialog" aria-modal="true" aria-labelledby="modal-nuevo-titulo">
+
+    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl
+                ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div>
+          <h2 id="modal-nuevo-titulo" class="text-base font-bold text-slate-800">
+            Nueva Oportunidad
+          </h2>
+          <p class="text-xs text-slate-500">Se creará en etapa Calificación</p>
+        </div>
+        <button type="button" (click)="cerrarNuevoModal()"
+                id="btn-cerrar-nuevo-modal"
+                class="flex h-8 w-8 items-center justify-center rounded-lg
+                       text-slate-400 hover:bg-slate-100 hover:text-slate-600
+                       transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+               stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Formulario -->
+      <form [formGroup]="nuevoForm" (ngSubmit)="onSubmitNuevo()"
+            id="form-nueva-oportunidad" class="px-6 py-5 space-y-4" novalidate>
+
+        <!-- Cliente -->
+        <div>
+          <label for="nuevo-cliente" class="mb-1 block text-xs font-semibold text-slate-700">
+            Cliente <span class="text-red-500">*</span>
+          </label>
+          <select
+            id="nuevo-cliente"
+            formControlName="clienteId"
+            [class.border-red-400]="nuevoFieldInvalid('clienteId')"
+            [class.ring-red-200]="nuevoFieldInvalid('clienteId')"
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5
+                   text-sm text-slate-800 shadow-sm ring-1 ring-transparent
+                   transition-all focus:border-blue-400 focus:outline-none
+                   focus:ring-2 focus:ring-blue-200">
+            <option [value]="null">Seleccionar cliente…</option>
+            @for (c of clientes(); track c.id) {
+              <option [value]="c.id">{{ c.razonSocialONombre }}</option>
+            }
+          </select>
+          @if (clientes().length === 0) {
+            <p class="mt-1 text-xs text-amber-600">
+              No hay clientes registrados. Primero convierte un lead.
+            </p>
+          }
+          @if (hasNuevoError('clienteId', 'required')) {
+            <p class="mt-1 text-xs text-red-500">Selecciona un cliente.</p>
+          }
+        </div>
+
+        <!-- Nombre del trato -->
+        <div>
+          <label for="nuevo-nombre" class="mb-1 block text-xs font-semibold text-slate-700">
+            Nombre del trato <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="nuevo-nombre"
+            type="text"
+            formControlName="nombre"
+            placeholder="ej. Renovación contrato anual"
+            [class.border-red-400]="nuevoFieldInvalid('nombre')"
+            [class.ring-red-200]="nuevoFieldInvalid('nombre')"
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5
+                   text-sm text-slate-800 shadow-sm ring-1 ring-transparent
+                   placeholder:text-slate-400 transition-all
+                   focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+          @if (hasNuevoError('nombre', 'required')) {
+            <p class="mt-1 text-xs text-red-500">El nombre es obligatorio.</p>
+          }
+          @if (hasNuevoError('nombre', 'minlength')) {
+            <p class="mt-1 text-xs text-red-500">Mínimo 3 caracteres.</p>
+          }
+        </div>
+
+        <!-- Monto + Probabilidad (fila) -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="nuevo-monto" class="mb-1 block text-xs font-semibold text-slate-700">
+              Monto estimado (Bs.) <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="nuevo-monto"
+              type="number"
+              formControlName="montoEstimado"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              [class.border-red-400]="nuevoFieldInvalid('montoEstimado')"
+              [class.ring-red-200]="nuevoFieldInvalid('montoEstimado')"
+              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5
+                     text-sm text-slate-800 shadow-sm ring-1 ring-transparent
+                     placeholder:text-slate-400 transition-all
+                     focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            @if (hasNuevoError('montoEstimado', 'required')) {
+              <p class="mt-1 text-xs text-red-500">Campo obligatorio.</p>
+            }
+            @if (hasNuevoError('montoEstimado', 'min')) {
+              <p class="mt-1 text-xs text-red-500">Debe ser ≥ 0.</p>
+            }
+          </div>
+
+          <div>
+            <label for="nuevo-probabilidad"
+                   class="mb-1 block text-xs font-semibold text-slate-700">
+              Probabilidad (%) <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="nuevo-probabilidad"
+              type="number"
+              formControlName="probabilidad"
+              min="0"
+              max="100"
+              placeholder="50"
+              [class.border-red-400]="nuevoFieldInvalid('probabilidad')"
+              [class.ring-red-200]="nuevoFieldInvalid('probabilidad')"
+              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5
+                     text-sm text-slate-800 shadow-sm ring-1 ring-transparent
+                     placeholder:text-slate-400 transition-all
+                     focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            @if (hasNuevoError('probabilidad', 'required')) {
+              <p class="mt-1 text-xs text-red-500">Campo obligatorio.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Fecha de cierre esperada -->
+        <div>
+          <label for="nuevo-fecha"
+                 class="mb-1 block text-xs font-semibold text-slate-700">
+            Fecha de cierre esperada <span class="text-slate-400">(opcional)</span>
+          </label>
+          <input
+            id="nuevo-fecha"
+            type="date"
+            formControlName="fechaCierreEsperada"
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5
+                   text-sm text-slate-800 shadow-sm ring-1 ring-transparent
+                   transition-all focus:border-blue-400 focus:outline-none
+                   focus:ring-2 focus:ring-blue-200"/>
+        </div>
+
+        <!-- Error global -->
+        @if (nuevoError()) {
+          <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p class="text-sm text-red-600">{{ nuevoError() }}</p>
+          </div>
+        }
+
+        <!-- Acciones -->
+        <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            (click)="cerrarNuevoModal()"
+            id="btn-cancelar-nuevo"
+            class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm
+                   font-medium text-slate-600 transition-colors
+                   hover:bg-slate-50 hover:text-slate-800">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btn-submit-nueva-oportunidad"
+            [disabled]="isSubmittingNuevo()"
+            class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5
+                   text-sm font-semibold text-white shadow-md shadow-blue-500/30
+                   transition-all hover:bg-blue-700
+                   disabled:cursor-not-allowed disabled:opacity-60">
+            @if (isSubmittingNuevo()) {
+              <span class="h-4 w-4 animate-spin rounded-full border-2
+                           border-white/40 border-t-white"></span>
+            }
+            Crear Oportunidad
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+}
+
+
+<!-- ╔══════════════════════════════════╗
+     ║   MODAL: Motivo de Pérdida       ║
+     ╚══════════════════════════════════╝ -->
+@if (isPerdidaModalOpen()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center
+              bg-slate-900/60 p-4 backdrop-blur-sm"
+       role="dialog" aria-modal="true" aria-labelledby="modal-perdida-titulo">
+
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl
+                ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 border-b border-red-100
+                  bg-red-50 px-6 py-4 rounded-t-2xl">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center
+                    rounded-full bg-red-100">
+          <svg class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <h2 id="modal-perdida-titulo"
+              class="text-base font-bold text-red-800">Registrar Pérdida</h2>
+          @if (oportunidadParaPerdida(); as op) {
+            <p class="text-xs text-red-600 truncate">{{ op.nombre }}</p>
+          }
+        </div>
+        <button type="button" (click)="cerrarPerdidaModal()"
+                id="btn-cerrar-perdida-modal"
+                class="flex h-8 w-8 items-center justify-center rounded-lg
+                       text-red-400 hover:bg-red-100 hover:text-red-600
+                       transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+               stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Formulario -->
+      <form [formGroup]="perdidaForm" (ngSubmit)="onSubmitPerdida()"
+            id="form-motivo-perdida" class="px-6 py-5 space-y-4" novalidate>
+
+        <p class="text-sm text-slate-600">
+          Describe brevemente el motivo por el que se perdió esta oportunidad.
+          Esta información es obligatoria para mantener la trazabilidad comercial.
+        </p>
+
+        <div>
+          <label for="motivo-perdida"
+                 class="mb-1 block text-xs font-semibold text-slate-700">
+            Motivo de pérdida <span class="text-red-500">*</span>
+          </label>
+          <textarea
+            id="motivo-perdida"
+            formControlName="motivo"
+            rows="4"
+            placeholder="ej. El cliente optó por un competidor con mejor precio…"
+            [class.border-red-400]="perdidaForm.get('motivo')?.invalid && perdidaForm.get('motivo')?.touched"
+            class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5
+                   text-sm text-slate-800 shadow-sm ring-1 ring-transparent
+                   placeholder:text-slate-400 transition-all
+                   focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200">
+          </textarea>
+          @if (perdidaForm.get('motivo')?.touched && perdidaForm.get('motivo')?.hasError('required')) {
+            <p class="mt-1 text-xs text-red-500">El motivo es obligatorio.</p>
+          }
+          @if (perdidaForm.get('motivo')?.touched && perdidaForm.get('motivo')?.hasError('minlength')) {
+            <p class="mt-1 text-xs text-red-500">Mínimo 5 caracteres.</p>
+          }
+        </div>
+
+        @if (perdidaError()) {
+          <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p class="text-sm text-red-600">{{ perdidaError() }}</p>
+          </div>
+        }
+
+        <!-- Acciones -->
+        <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            (click)="cerrarPerdidaModal()"
+            id="btn-cancelar-perdida"
+            class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm
+                   font-medium text-slate-600 transition-colors
+                   hover:bg-slate-50 hover:text-slate-800">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btn-submit-perdida"
+            [disabled]="isSubmittingPerdida()"
+            class="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5
+                   text-sm font-semibold text-white shadow-md shadow-red-500/30
+                   transition-all hover:bg-red-700
+                   disabled:cursor-not-allowed disabled:opacity-60">
+            @if (isSubmittingPerdida()) {
+              <span class="h-4 w-4 animate-spin rounded-full border-2
+                           border-white/40 border-t-white"></span>
+            }
+            Confirmar Pérdida
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+}
+
+
+<!-- ╔══════════════════════════════════╗
+     ║   MODAL: Detalle de Oportunidad  ║
+     ╚══════════════════════════════════╝ -->
+@if (isDetalleModalOpen() && oportunidadDetalle(); as op) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center
+              bg-slate-900/60 p-4 backdrop-blur-sm"
+       role="dialog" aria-modal="true" aria-labelledby="modal-detalle-titulo">
+
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl
+                ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
+
+      <!-- Header con etapa badge -->
+      <div class="flex items-start justify-between border-b border-slate-100 px-6 py-4">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5
+                         text-xs font-semibold ring-1
+                         {{ getColumnMeta(op.etapa).colorBadge }}">
+              <span class="h-1.5 w-1.5 rounded-full {{ getColumnMeta(op.etapa).colorDot }}"></span>
+              {{ getColumnMeta(op.etapa).label }}
+            </span>
+            <span class="rounded-full px-2 py-0.5 text-xs font-bold ring-1
+                         {{ probabilidadBadgeClass(op.probabilidad) }}">
+              {{ op.probabilidad }}%
+            </span>
+          </div>
+          <h2 id="modal-detalle-titulo"
+              class="text-base font-bold text-slate-800 leading-tight">
+            {{ op.nombre }}
+          </h2>
+        </div>
+        <button type="button" (click)="cerrarDetalle()"
+                id="btn-cerrar-detalle"
+                class="ml-3 flex h-8 w-8 shrink-0 items-center justify-center
+                       rounded-lg text-slate-400 hover:bg-slate-100
+                       hover:text-slate-600 transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+               stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Contenido -->
+      <div class="px-6 py-5 space-y-4">
+        <dl class="space-y-3 text-sm">
+
+          <div class="flex items-start gap-3">
+            <dt class="w-32 shrink-0 text-xs font-semibold uppercase tracking-wide
+                       text-slate-400">Cliente</dt>
+            <dd class="text-slate-800 font-medium">{{ op.razonSocialCliente }}</dd>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <dt class="w-32 shrink-0 text-xs font-semibold uppercase tracking-wide
+                       text-slate-400">Vendedor</dt>
+            <dd class="text-slate-700">{{ op.nombreVendedor }}</dd>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <dt class="w-32 shrink-0 text-xs font-semibold uppercase tracking-wide
+                       text-slate-400">Monto</dt>
+            <dd class="text-slate-800 font-bold text-base">
+              {{ formatMonto(op.montoEstimado) }}
+            </dd>
+          </div>
+
+          @if (op.fechaCierreEsperada) {
+            <div class="flex items-start gap-3">
+              <dt class="w-32 shrink-0 text-xs font-semibold uppercase tracking-wide
+                         text-slate-400">Cierre esp.</dt>
+              <dd class="text-slate-700">{{ formatFecha(op.fechaCierreEsperada) }}</dd>
+            </div>
+          }
+
+          <div class="flex items-start gap-3">
+            <dt class="w-32 shrink-0 text-xs font-semibold uppercase tracking-wide
+                       text-slate-400">Creada</dt>
+            <dd class="text-slate-500 text-xs">{{ formatFecha(op.createdAt) }}</dd>
+          </div>
+
+          @if (op.motivoPerdida) {
+            <div class="rounded-xl border border-red-100 bg-red-50 p-3">
+              <p class="text-xs font-semibold text-red-600 mb-1">Motivo de pérdida</p>
+              <p class="text-sm text-red-700">{{ op.motivoPerdida }}</p>
+            </div>
+          }
+        </dl>
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t border-slate-100 px-6 py-4">
+        <button type="button" (click)="cerrarDetalle()"
+                id="btn-cerrar-detalle-footer"
+                class="w-full rounded-xl border border-slate-200 py-2.5 text-sm
+                       font-medium text-slate-600 transition-colors
+                       hover:bg-slate-50 hover:text-slate-800">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}

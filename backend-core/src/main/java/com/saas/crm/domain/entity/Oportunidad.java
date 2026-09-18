@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -72,14 +74,102 @@ public class Oportunidad {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    /** Inicializa {@code createdAt} automáticamente antes de la primera persistencia. */
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    // ─── Lifecycle callbacks ──────────────────────────────────────────────────
+
+    /** Inicializa {@code createdAt} y {@code updatedAt} antes de la primera persistencia. */
     @PrePersist
     protected void onCreate() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        if (this.createdAt == null) this.createdAt = now;
+        if (this.updatedAt == null) this.updatedAt = now;
+        if (this.etapa == null) this.etapa = EtapaOportunidad.CALIFICACION;
+    }
+
+    /** Actualiza {@code updatedAt} en cada modificación. */
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // ─── Métodos de negocio ───────────────────────────────────────────────────
+
+    /**
+     * Verifica si la oportunidad está en un estado terminal (GANADA o PERDIDA).
+     * Los estados terminales no pueden ser modificados.
+     */
+    public boolean isTerminal() {
+        return this.etapa == EtapaOportunidad.GANADA
+                || this.etapa == EtapaOportunidad.PERDIDA;
+    }
+
+    /**
+     * Avanza la oportunidad a la etapa indicada.
+     * No puede usarse para cerrar la oportunidad (usar {@link #cerrarGanada()}
+     * o {@link #cerrarPerdida(String)} en su lugar).
+     *
+     * @param nuevaEtapa nueva etapa a establecer
+     * @throws ResponseStatusException HTTP 400 si ya está en estado terminal
+     * @throws ResponseStatusException HTTP 400 si se intenta usar para cierre
+     */
+    public void avanzarEtapa(EtapaOportunidad nuevaEtapa) {
+        if (isTerminal()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La oportunidad ya está cerrada (etapa: " + this.etapa + ") y no puede modificarse.");
         }
-        if (this.etapa == null) {
-            this.etapa = EtapaOportunidad.CALIFICACION;
+        if (nuevaEtapa == EtapaOportunidad.GANADA) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Para cerrar como ganada, use el endpoint PATCH /{id}/ganada.");
         }
+        if (nuevaEtapa == EtapaOportunidad.PERDIDA) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Para cerrar como perdida (con motivo), use el endpoint PATCH /{id}/perdida.");
+        }
+        this.etapa = nuevaEtapa;
+    }
+
+    /**
+     * Cierra la oportunidad como GANADA.
+     * Establece probabilidad al 100 %.
+     *
+     * @throws ResponseStatusException HTTP 400 si ya está en estado terminal
+     */
+    public void cerrarGanada() {
+        if (isTerminal()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La oportunidad ya está cerrada (etapa: " + this.etapa + ") y no puede modificarse.");
+        }
+        this.etapa = EtapaOportunidad.GANADA;
+        this.probabilidad = 100;
+    }
+
+    /**
+     * Cierra la oportunidad como PERDIDA con el motivo indicado.
+     * Establece probabilidad al 0 %.
+     *
+     * @param motivo descripción del motivo de pérdida (obligatorio)
+     * @throws ResponseStatusException HTTP 400 si motivo está vacío
+     * @throws ResponseStatusException HTTP 400 si ya está en estado terminal
+     */
+    public void cerrarPerdida(String motivo) {
+        if (isTerminal()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La oportunidad ya está cerrada (etapa: " + this.etapa + ") y no puede modificarse.");
+        }
+        if (motivo == null || motivo.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El motivo de pérdida es obligatorio para cerrar la oportunidad como PERDIDA.");
+        }
+        this.etapa = EtapaOportunidad.PERDIDA;
+        this.probabilidad = 0;
+        this.motivoCierre = motivo.trim();
     }
 }
