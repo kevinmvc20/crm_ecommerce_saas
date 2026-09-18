@@ -7,24 +7,25 @@ import { AuthService } from '../../../core/services/auth.service';
 interface NavItem {
   label: string;
   route: string;
-  icon: 'dashboard' | 'crm' | 'crm-leads' | 'crm-oportunidades' | 'catalog' | 'orders' | 'settings';
+  icon: 'dashboard' | 'crm' | 'crm-leads' | 'pipeline' | 'catalog' | 'orders' | 'users' | 'settings';
 }
 
 // ─── Catálogos de ítems por rol ───────────────────────────────────────────────
 
 const NAV_SUPER_ADMIN: NavItem[] = [
-  { label: 'Dashboard',     route: '/admin/dashboard', icon: 'dashboard' },
-  { label: 'Empresas SaaS', route: '/admin/tenants',   icon: 'crm'       },
-  { label: 'Configuración', route: '/admin/config',    icon: 'settings'  },
+  { label: 'Dashboard', route: '/admin/dashboard', icon: 'dashboard' },
+  { label: 'Empresas SaaS', route: '/admin/tenants', icon: 'crm' },
+  { label: 'Configuración', route: '/admin/config', icon: 'settings' },
 ];
 
 const NAV_TENANT: NavItem[] = [
-  { label: 'Dashboard',             route: '/admin/dashboard',          icon: 'dashboard'          },
-  { label: 'CRM & Prospectos',      route: '/admin/crm/leads',          icon: 'crm-leads'          },
-  { label: 'Pipeline de Ventas',    route: '/admin/crm/oportunidades',  icon: 'crm-oportunidades'  },
-  { label: 'Catálogo & Stock',      route: '/admin/catalogo',           icon: 'catalog'            },
-  { label: 'Ventas & Pedidos',      route: '/admin/ventas',             icon: 'orders'             },
-  { label: 'Configuración',         route: '/admin/config',             icon: 'settings'           },
+  { label: 'Dashboard', route: '/admin/dashboard', icon: 'dashboard' },
+  { label: 'CRM & Prospectos', route: '/admin/crm/leads', icon: 'crm-leads' },
+  { label: 'Pipeline de Ventas', route: '/admin/crm/oportunidades', icon: 'pipeline' },
+  { label: 'Catálogo & Stock', route: '/admin/catalogo', icon: 'catalog' },
+  { label: 'Ventas & Pedidos', route: '/admin/ventas', icon: 'orders' },
+  { label: 'Equipo Comercial', route: '/admin/usuarios', icon: 'users' },
+  { label: 'Configuración', route: '/admin/config', icon: 'settings' },
 ];
 
 @Component({
@@ -67,9 +68,16 @@ export class AdminDashboardComponent {
    * - ROLE_SUPER_ADMIN → vista global (incluye "Empresas SaaS")
    * - ROLE_ADMIN_EMPRESA / ROLE_VENDEDOR → vista de tenant (oculta "Empresas SaaS")
    */
-  protected readonly menuItems = computed<NavItem[]>(() =>
-    this.isSuperAdmin() ? NAV_SUPER_ADMIN : NAV_TENANT
-  );
+  protected readonly menuItems = computed<NavItem[]>(() => {
+    if (this.isSuperAdmin()) return NAV_SUPER_ADMIN;
+
+    // Si es TENANT, filtramos opciones según si es admin o vendedor
+    let items = [...NAV_TENANT];
+    if (this.currentUser()?.rol !== 'ROLE_ADMIN_EMPRESA') {
+      items = items.filter(i => i.route !== '/admin/usuarios');
+    }
+    return items;
+  });
 
   /** Nombre del workspace según rol y tenant */
   protected readonly workspaceName = computed<string>(() => {
@@ -83,9 +91,9 @@ export class AdminDashboardComponent {
   protected readonly roleLabel = computed<string>(() => {
     const rol = this.currentUser()?.rol ?? '';
     const labels: Record<string, string> = {
-      ROLE_SUPER_ADMIN:   'Super Admin',
+      ROLE_SUPER_ADMIN: 'Super Admin',
       ROLE_ADMIN_EMPRESA: 'Admin Empresa',
-      ROLE_VENDEDOR:      'Vendedor',
+      ROLE_VENDEDOR: 'Vendedor',
     };
     return labels[rol] ?? rol;
   });

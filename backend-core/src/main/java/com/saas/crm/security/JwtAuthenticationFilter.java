@@ -1,5 +1,6 @@
 package com.saas.crm.security;
 
+import com.saas.crm.domain.entity.Usuario;
 import com.saas.crm.repository.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -48,16 +49,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // Solo procesar si hay email y no existe ya una autenticación
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = usuarioRepository
+                Usuario usuario = usuarioRepository
                         .findByEmail(userEmail)
                         .orElse(null);
 
-                if (userDetails != null && jwtService.isTokenValid(jwt, userDetails)) {
+                if (usuario != null && jwtService.isTokenValid(jwt, usuario)) {
+                    if (!usuario.isEnabled() || !Boolean.TRUE.equals(usuario.getActivo())) {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        return;
+                    }
+                    
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    userDetails,
+                                    usuario,
                                     null,
-                                    userDetails.getAuthorities()
+                                    usuario.getAuthorities()
                             );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);

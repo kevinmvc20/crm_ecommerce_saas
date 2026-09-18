@@ -22,6 +22,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     List<Usuario> findByTenantId(UUID tenantId);
 
     /**
+     * Recupera todos los usuarios asociados a un tenant específico ordenados por creación.
+     *
+     * @param tenantId UUID del tenant
+     * @return lista de usuarios del tenant
+     */
+    List<Usuario> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+
+    /**
      * Verifica si ya existe un usuario con el email indicado (scope global).
      *
      * @param email email a comprobar
@@ -38,4 +46,12 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      * @return número de usuarios operacionales actuales del tenant
      */
     long countByTenantIdAndRolNombreNot(UUID tenantId, String rolNombreExcluido);
+
+    /**
+     * Cuenta los usuarios activos de un tenant específico.
+     *
+     * @param tenantId UUID del tenant
+     * @return número de usuarios activos
+     */
+    long countByTenantIdAndActivoTrue(UUID tenantId);
 }

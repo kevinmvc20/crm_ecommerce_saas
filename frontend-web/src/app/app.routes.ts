@@ -56,6 +56,14 @@ export const routes: Routes = [
                     ),
             },
             {
+                // /admin/usuarios — Gestión de Equipo Comercial / Vendedores
+                path: 'usuarios',
+                loadComponent: () =>
+                    import('./features/admin/usuarios/usuario-list/usuario-list.component').then(
+                        m => m.UsuarioListComponent
+                    ),
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full',
