@@ -41,7 +41,7 @@ import java.util.UUID;
 public class LeadService {
 
     private static final String ROL_VENDEDOR = "ROLE_VENDEDOR";
-    private static final String ROL_ADMIN_EMPRESA = "ROLE_ADMIN_EMPRESA";
+    // rivate static final String ROL_ADMIN_EMPRESA = "ROLE_ADMIN_EMPRESA";
 
     private final LeadRepository leadRepository;
     private final ClienteRepository clienteRepository;
@@ -127,23 +127,26 @@ public class LeadService {
      * {@code CALIFICADO}. Registra automáticamente una entrada de auditoría
      * en la bitácora (InteraccionCRM tipo NOTA).
      *
-     * <p>Reglas de negocio aplicadas en orden:</p>
+     * <p>
+     * Reglas de negocio aplicadas en orden:
+     * </p>
      * <ol>
-     *   <li>El lead debe tener vendedor asignado (HTTP 400).</li>
-     *   <li>El lead debe haber sido contactado previamente; si su estado es
-     *       {@code NUEVO} se rechaza la calificación (HTTP 400).</li>
-     *   <li>El lead no debe estar en estado terminal (HTTP 400).</li>
+     * <li>El lead debe tener vendedor asignado (HTTP 400).</li>
+     * <li>El lead debe haber sido contactado previamente; si su estado es
+     * {@code NUEVO} se rechaza la calificación (HTTP 400).</li>
+     * <li>El lead no debe estar en estado terminal (HTTP 400).</li>
      * </ol>
      *
-     * @param tenantId          UUID del tenant autenticado
-     * @param usuarioEjecutivo  usuario que realiza la calificación (puede ser null,
-     *                          en cuyo caso se usa el vendedor asignado del lead)
-     * @param leadId            UUID del lead a calificar
-     * @param request           nuevos valores de score y notas
+     * @param tenantId         UUID del tenant autenticado
+     * @param usuarioEjecutivo usuario que realiza la calificación (puede ser null,
+     *                         en cuyo caso se usa el vendedor asignado del lead)
+     * @param leadId           UUID del lead a calificar
+     * @param request          nuevos valores de score y notas
      * @return {@link LeadResponse} actualizado
      */
     @Transactional
-    public LeadResponse calificarLead(UUID tenantId, Usuario usuarioEjecutivo, UUID leadId, LeadCalificarRequest request) {
+    public LeadResponse calificarLead(UUID tenantId, Usuario usuarioEjecutivo, UUID leadId,
+            LeadCalificarRequest request) {
 
         Lead lead = resolverLeadDelTenant(tenantId, leadId);
 
@@ -237,8 +240,8 @@ public class LeadService {
         // Guarda: el prospecto debe tener un score mínimo de 70 para ser convertido
         if (lead.getScore() == null || lead.getScore() < 70) {
             throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "El prospecto debe tener un score mínimo de 70 para ser convertido a cliente.");
+                    HttpStatus.BAD_REQUEST,
+                    "El prospecto debe tener un score mínimo de 70 para ser convertido a cliente.");
         }
 
         // 1. Validar estado del lead

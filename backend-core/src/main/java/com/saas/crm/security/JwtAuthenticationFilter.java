@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -58,19 +57,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         return;
                     }
-                    
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    usuario,
-                                    null,
-                                    usuario.getAuthorities()
-                            );
+
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            usuario,
+                            null,
+                            usuario.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (Exception ex) {
-            // Token inválido o expirado: continuar sin autenticar (la cadena de filtros devolverá 401)
+            // Token inválido o expirado: continuar sin autenticar (la cadena de filtros
+            // devolverá 401)
             logger.warn("JWT processing failed: " + ex.getMessage());
         }
 

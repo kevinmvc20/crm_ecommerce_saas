@@ -100,4 +100,12 @@ export class UsuarioListComponent implements OnInit {
             }
         });
     }
+
+    formatRol(rol: string): string {
+        if (!rol) return '';
+        let r = rol.replace('ROLE_', '');
+        if (r === 'ADMIN_EMPRESA') return 'Administrador';
+        if (r === 'VENDEDOR') return 'Vendedor';
+        return r.charAt(0).toUpperCase() + r.slice(1).toLowerCase();
+    }
 }
