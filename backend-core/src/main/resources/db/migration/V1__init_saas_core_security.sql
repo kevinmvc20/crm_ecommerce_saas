@@ -71,13 +71,14 @@ INSERT INTO rol (id, tenant_id, nombre) VALUES
 -- Credenciales de acceso:
 -- Email: superadmin@saas.com
 -- Contraseña en texto plano: admin123 (hash encriptado con BCrypt costo 10)
-INSERT INTO usuario (id, tenant_id, rol_id, email, password_hash, tipo_usuario, activo)
+INSERT INTO usuario (id, tenant_id, rol_id, nombre_completo, email, password_hash, tipo_usuario, activo)
 VALUES (
     gen_random_uuid(),
     NULL,
     1,
+    'Super Administrador Global',
     'superadmin@saas.com',
-    '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi',
+    '$2a$10$wT0vB5s5qf/Z1Hl7h5mG4O1dZkK4s6yKzTz7P0bQ3aQcZ5N7/mBmu',
     'SUPER_ADMIN',
     TRUE
 );
