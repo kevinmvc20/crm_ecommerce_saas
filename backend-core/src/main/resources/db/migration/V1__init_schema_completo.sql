@@ -204,7 +204,7 @@ VALUES (
     1,
     'Super Administrador Global',
     'superadmin@saas.com',
-    '$2a$10$wT0vB5s5qf/Z1Hl7h5mG4O1dZkK4s6yKzTz7P0bQ3aQcZ5N7/mBmu',
+    crypt('admin123', gen_salt('bf', 10)),
     'SUPER_ADMIN',
     TRUE
 );
