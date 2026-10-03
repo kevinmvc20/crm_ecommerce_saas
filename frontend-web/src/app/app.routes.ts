@@ -64,6 +64,14 @@ export const routes: Routes = [
                     ),
             },
             {
+                // /admin/catalogo — Catálogo e Inventario Multi-Sucursal (Módulo 4)
+                path: 'catalogo',
+                loadComponent: () =>
+                    import('./features/inventario/catalogo-dashboard/catalogo-dashboard.component').then(
+                        m => m.CatalogoDashboardComponent
+                    ),
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full',
