@@ -70,4 +70,37 @@ public class SucursalController {
         SucursalResponse created = sucursalService.registrarSucursal(tenantId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+
+    // ─── PUT /{id} ────────────────────────────────────────────────────────────
+
+    /**
+     * Actualiza una sucursal existente.
+     *
+     * <p>PUT {@code /api/v1/admin/sucursales/{id}}</p>
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<SucursalResponse> actualizarSucursal(
+            @AuthenticationPrincipal Usuario usuarioAuth,
+            @PathVariable Integer id,
+            @Valid @RequestBody com.saas.crm.dto.inventario.SucursalUpdateRequest request) {
+
+        UUID tenantId = usuarioAuth.getTenant().getId();
+        return ResponseEntity.ok(sucursalService.actualizarSucursal(tenantId, id, request));
+    }
+
+    // ─── PATCH /{id}/toggle-activo ────────────────────────────────────────────
+
+    /**
+     * Alterna el estado activo/inactivo de una sucursal.
+     *
+     * <p>PATCH {@code /api/v1/admin/sucursales/{id}/toggle-activo}</p>
+     */
+    @PatchMapping("/{id}/toggle-activo")
+    public ResponseEntity<SucursalResponse> toggleActivoSucursal(
+            @AuthenticationPrincipal Usuario usuarioAuth,
+            @PathVariable Integer id) {
+
+        UUID tenantId = usuarioAuth.getTenant().getId();
+        return ResponseEntity.ok(sucursalService.toggleActivoSucursal(tenantId, id));
+    }
 }

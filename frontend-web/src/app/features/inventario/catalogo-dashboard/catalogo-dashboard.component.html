@@ -166,8 +166,12 @@
           @for (p of productosConStock(); track p.id) {
 
           <!-- ── Fila principal del producto ── -->
-          <tr class="group transition-colors hover:bg-slate-50/60"
-            [class.bg-blue-50]="isExpanded(p.id)">
+          <tr class="group transition-colors"
+            [ngClass]="{
+              'hover:bg-slate-50/60': p.activo,
+              'bg-blue-50': isExpanded(p.id) && p.activo,
+              'opacity-75 bg-slate-50/40': !p.activo
+            }">
 
             <!-- Chevron expandir -->
             <td class="py-4 pl-4 pr-2">
@@ -263,9 +267,14 @@
 
                 <!-- Añadir variante -->
                 <button type="button"
-                  class="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 shadow-sm transition-colors hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium shadow-sm transition-colors focus:outline-none focus:ring-2"
+                  [ngClass]="p.activo 
+                    ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 focus:ring-indigo-500'
+                    : 'border-slate-200 bg-slate-50 text-slate-400 opacity-40 cursor-not-allowed'"
                   [attr.id]="'btn-variante-' + p.id"
                   [attr.aria-label]="'Añadir variante a ' + p.nombre"
+                  [attr.title]="p.activo ? '' : 'Reactive el producto para añadir nuevas variantes'"
+                  [disabled]="!p.activo"
                   (click)="abrirModalVariante(p)">
                   <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -337,17 +346,21 @@
                         @if (v.stocks && v.stocks.length > 0) {
                         <div class="flex flex-wrap gap-1.5">
                           @for (stock of v.stocks; track stock.id) {
-                          <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
-                            [class]="stock.stockDisponible > stock.stockMinimo
-                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
-                              : stock.stockDisponible > 0
-                                ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
-                                : 'bg-red-50 text-red-700 ring-red-200'">
-                            <span class="h-1 w-1 rounded-full"
-                              [class]="stock.stockDisponible > stock.stockMinimo ? 'bg-emerald-500' : stock.stockDisponible > 0 ? 'bg-amber-500' : 'bg-red-500'"
-                              aria-hidden="true"></span>
-                            {{ getSucursalNombre(stock.sucursalId) }}: {{ stock.stockDisponible }}
+                          @if (stock.stockDisponible > stock.stockMinimo) {
+                          <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                            <span class="h-1 w-1 rounded-full bg-emerald-500" aria-hidden="true"></span>
+                            {{ getNombreSucursal(stock.sucursalId) }}: {{ stock.stockDisponible }} disp.
                           </span>
+                          } @else if (stock.stockDisponible > 0) {
+                          <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                            ⚠️ {{ getNombreSucursal(stock.sucursalId) }}: {{ stock.stockDisponible }} disp. (Mín: {{ stock.stockMinimo }})
+                          </span>
+                          } @else {
+                          <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                            <span class="h-1 w-1 rounded-full bg-rose-500" aria-hidden="true"></span>
+                            {{ getNombreSucursal(stock.sucursalId) }}: Agotado (0 unid.)
+                          </span>
+                          }
                           }
                         </div>
                         } @else {
@@ -416,9 +429,19 @@
               }
             </div>
           </div>
-          @if (cat.activo) {
-          <span class="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">Activa</span>
-          }
+          <div class="flex flex-col gap-2 items-end">
+            @if (cat.activo) {
+            <span class="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">Activa</span>
+            } @else {
+            <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-200">Inactiva</span>
+            }
+            <div class="flex gap-1.5 mt-1">
+              <button type="button" class="text-xs font-medium text-blue-600 hover:text-blue-800" (click)="abrirEditarCategoria(cat)">Editar</button>
+              <button type="button" class="text-xs font-medium" [class.text-red-600]="cat.activo" [class.text-emerald-600]="!cat.activo" (click)="toggleEstadoCategoria(cat)">
+                {{ cat.activo ? 'Desactivar' : 'Activar' }}
+              </button>
+            </div>
+          </div>
         </div>
 
         @if (cat.subcategorias.length) {
@@ -462,8 +485,8 @@
       }
       @for (suc of sucursales(); track suc.id) {
       <div class="group relative rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md">
-        <!-- Badge estado -->
-        <div class="absolute right-4 top-4">
+        <!-- Badge estado y botones -->
+        <div class="absolute right-4 top-4 flex flex-col items-end gap-2">
           @if (suc.activo) {
           <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
@@ -475,6 +498,12 @@
             Inactiva
           </span>
           }
+          <div class="flex gap-1.5 mt-1">
+            <button type="button" class="text-xs font-medium text-blue-600 hover:text-blue-800" (click)="abrirEditarSucursal(suc)">Editar</button>
+            <button type="button" class="text-xs font-medium" [class.text-red-600]="suc.activo" [class.text-emerald-600]="!suc.activo" (click)="toggleEstadoSucursal(suc)">
+              {{ suc.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+          </div>
         </div>
 
         <!-- Icono + nombre -->
@@ -655,7 +684,7 @@
                     ? 'block w-full rounded-lg border border-red-500 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors'
                     : 'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors'">
                   <option [ngValue]="null">— Ninguna —</option>
-                  @for (suc of sucursales(); track suc.id) {
+                  @for (suc of sucursalesActivas(); track suc.id) {
                   <option [ngValue]="suc.id">{{ suc.nombre }}</option>
                   }
                 </select>
@@ -864,7 +893,7 @@
           <select id="var-sucursal" formControlName="sucursalId"
             class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors">
             <option [ngValue]="null">— Ninguna —</option>
-            @for (suc of sucursales(); track suc.id) {
+            @for (suc of sucursalesActivas(); track suc.id) {
             <option [ngValue]="suc.id">{{ suc.nombre }}</option>
             }
           </select>
@@ -944,7 +973,7 @@
           class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
           [class.border-red-400]="ajusteStockForm.get('sucursalId')?.invalid && ajusteStockForm.get('sucursalId')?.touched">
           <option [ngValue]="null">— Seleccionar sucursal —</option>
-          @for (suc of sucursales(); track suc.id) {
+          @for (suc of sucursalesActivas(); track suc.id) {
           <option [ngValue]="suc.id">{{ suc.nombre }}</option>
           }
         </select>
@@ -1137,6 +1166,79 @@
         </button>
       </div>
     </form>
+  </div>
+</div>
+}
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║                    MODAL: EDITAR CATEGORÍA                       ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+@if (showEditarCategoriaModal()) {
+<div id="modal-editar-categoria" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+  <div class="w-full max-w-md flex flex-col rounded-2xl bg-white shadow-2xl">
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <h2 class="text-base font-bold text-slate-800">Editar Categoría</h2>
+      <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" (click)="cerrarModalEditarCategoria()">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form [formGroup]="editarCategoriaForm" (ngSubmit)="guardarEdicionCategoria()" class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre <span class="text-red-500">*</span></label>
+        <input type="text" formControlName="nombre" class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">Descripción</label>
+        <textarea formControlName="descripcion" rows="2" class="block w-full resize-none rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">Categoría Padre</label>
+        <select formControlName="categoriaPadreId" class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+          <option [ngValue]="null">— Ninguna (Raíz) —</option>
+          @for (cat of categoriasRaiz(); track cat.id) {
+          <option [ngValue]="cat.id">{{ cat.label }}</option>
+          }
+        </select>
+      </div>
+    </form>
+    <div class="flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 rounded-b-2xl">
+      <button type="button" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" (click)="cerrarModalEditarCategoria()" [disabled]="isSaving()">Cancelar</button>
+      <button type="button" (click)="guardarEdicionCategoria()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60" [disabled]="isSaving() || editarCategoriaForm.invalid">Guardar Cambios</button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║                    MODAL: EDITAR SUCURSAL                        ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+@if (showEditarSucursalModal()) {
+<div id="modal-editar-sucursal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+  <div class="w-full max-w-md flex flex-col rounded-2xl bg-white shadow-2xl">
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <h2 class="text-base font-bold text-slate-800">Editar Sucursal</h2>
+      <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" (click)="cerrarModalEditarSucursal()">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form [formGroup]="editarSucursalForm" (ngSubmit)="guardarEdicionSucursal()" class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre <span class="text-red-500">*</span></label>
+        <input type="text" formControlName="nombre" class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">Dirección</label>
+        <input type="text" formControlName="direccion" class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
+        <input type="text" formControlName="telefono" class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+      </div>
+    </form>
+    <div class="flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 rounded-b-2xl">
+      <button type="button" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" (click)="cerrarModalEditarSucursal()" [disabled]="isSaving()">Cancelar</button>
+      <button type="button" (click)="guardarEdicionSucursal()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60" [disabled]="isSaving() || editarSucursalForm.invalid">Guardar Cambios</button>
+    </div>
   </div>
 </div>
 }

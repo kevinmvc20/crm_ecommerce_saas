@@ -48,6 +48,10 @@ export class CatalogoDashboardComponent implements OnInit {
   readonly categorias   = signal<Categoria[]>([]);
   readonly sucursales   = signal<Sucursal[]>([]);
 
+  // ── Filtros de Entidades Activas (Reglas de Negocio) ────────────────────────
+  readonly categoriasActivas = computed(() => this.categorias().filter(c => c.activo));
+  readonly sucursalesActivas = computed(() => this.sucursales().filter(s => s.activo));
+
   // ── Modales existentes ───────────────────────────────────────────────────────
   readonly showModalProducto  = signal(false);
   readonly showModalCategoria = signal(false);
@@ -75,6 +79,13 @@ export class CatalogoDashboardComponent implements OnInit {
   /** Variante seleccionada para el modal de ajuste de stock. */
   readonly varianteSeleccionada = signal<VarianteProducto | null>(null);
 
+  // ── Modales de Edición Categoría/Sucursal ───────────────────────────────────
+  readonly showEditarCategoriaModal = signal<boolean>(false);
+  readonly categoriaSeleccionada = signal<Categoria | null>(null);
+
+  readonly showEditarSucursalModal = signal<boolean>(false);
+  readonly sucursalSeleccionada = signal<Sucursal | null>(null);
+
   // ── Formulario: Añadir Variante Adicional ───────────────────────────────────
   readonly varianteAdicionalForm = this.fb.group({
     sku:             ['', [Validators.required, Validators.maxLength(60)]],
@@ -98,9 +109,23 @@ export class CatalogoDashboardComponent implements OnInit {
     categoriaId: [null as number | null],
   });
 
+  // ── Formulario: Editar Categoría ────────────────────────────────────────────
+  readonly editarCategoriaForm = this.fb.group({
+    nombre:           ['', [Validators.required, Validators.maxLength(100)]],
+    descripcion:      [''],
+    categoriaPadreId: [null as number | null],
+  });
+
+  // ── Formulario: Editar Sucursal ─────────────────────────────────────────────
+  readonly editarSucursalForm = this.fb.group({
+    nombre:    ['', [Validators.required, Validators.maxLength(120)]],
+    direccion: ['', Validators.maxLength(250)],
+    telefono:  ['', Validators.maxLength(30)],
+  });
+
   // ── Categorías aplanadas (para selector en modal producto) ──────────────────
   readonly categoriasFlat = computed<CategoriaFlat[]>(() =>
-    this.flattenCategorias(this.categorias(), 0)
+    this.flattenCategorias(this.categoriasActivas(), 0)
   );
 
   /** Solo categorías de primer nivel (raíces) para el selector de categoría padre */
@@ -236,15 +261,9 @@ export class CatalogoDashboardComponent implements OnInit {
       stockInicial:   raw.stockInicial ? Number(raw.stockInicial) : undefined,
       sucursalId:     raw.sucursalId ? Number(raw.sucursalId) : undefined,
     }).subscribe({
-      next: nuevaVariante => {
-        // Actualizar la lista de productos en el signal sin recargar todo
-        this.productos.update(list =>
-          list.map(p =>
-            p.id === prod.id
-              ? { ...p, variantes: [...p.variantes, nuevaVariante] }
-              : p
-          )
-        );
+      next: _nuevaVariante => {
+        // Recargar la lista de productos para obtener datos actualizados
+        this.svc.getProductos().subscribe({ next: data => this.productos.set(data) });
         this.isSaving.set(false);
         this.showVarianteModal.set(false);
       },
@@ -260,7 +279,15 @@ export class CatalogoDashboardComponent implements OnInit {
   abrirModalAjusteStock(prod: Producto, variante: VarianteProducto): void {
     this.productoSeleccionado.set(prod);
     this.varianteSeleccionada.set(variante);
-    this.ajusteStockForm.reset({ sucursalId: null, nuevoStockFisico: 0, stockMinimo: 5 });
+    
+    // Sugerir la primera sucursal disponible (y activa) si existe
+    const primeraSucursalId = this.sucursalesActivas().length > 0 ? this.sucursalesActivas()[0].id : null;
+    
+    this.ajusteStockForm.patchValue({ 
+      sucursalId: primeraSucursalId, 
+      nuevoStockFisico: 0, 
+      stockMinimo: 5 
+    });
     this.saveError.set(null);
     this.showAjusteStockModal.set(true);
   }
@@ -445,16 +472,72 @@ export class CatalogoDashboardComponent implements OnInit {
       categoriaPadreId: raw.categoriaPadreId ?? undefined,
     }).subscribe({
       next: cat => {
-        this.categorias.update(list => {
-          if (!cat.categoriaPadreId) return [...list, cat];
-          return list.map(c => this.insertSubcategoria(c, cat));
-        });
+        // Recargar categorías para reconstruir el árbol
+        this.svc.getCategorias().subscribe(data => this.categorias.set(data));
         this.isSaving.set(false);
         this.showModalCategoria.set(false);
       },
       error: (err) => {
         this.saveError.set(err?.error?.message ?? 'Error al crear la categoría.');
         this.isSaving.set(false);
+      },
+    });
+  }
+
+  // ── Acciones Categoría (Editar/Toggle) ──────────────────────────────────────
+
+  abrirEditarCategoria(cat: Categoria): void {
+    this.categoriaSeleccionada.set(cat);
+    this.editarCategoriaForm.patchValue({
+      nombre: cat.nombre,
+      descripcion: cat.descripcion || '',
+      categoriaPadreId: cat.categoriaPadreId ?? null,
+    });
+    this.saveError.set(null);
+    this.showEditarCategoriaModal.set(true);
+  }
+
+  cerrarModalEditarCategoria(): void {
+    this.showEditarCategoriaModal.set(false);
+    this.categoriaSeleccionada.set(null);
+  }
+
+  guardarEdicionCategoria(): void {
+    if (this.editarCategoriaForm.invalid) {
+      this.editarCategoriaForm.markAllAsTouched();
+      return;
+    }
+    const cat = this.categoriaSeleccionada();
+    if (!cat) return;
+
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    const raw = this.editarCategoriaForm.getRawValue();
+    this.svc.actualizarCategoria(cat.id, {
+      nombre: raw.nombre!,
+      descripcion: raw.descripcion || undefined,
+      categoriaPadreId: raw.categoriaPadreId ?? undefined,
+    }).subscribe({
+      next: () => {
+        this.svc.getCategorias().subscribe(data => this.categorias.set(data));
+        this.isSaving.set(false);
+        this.showEditarCategoriaModal.set(false);
+      },
+      error: (err) => {
+        this.saveError.set(err?.error?.message ?? 'Error al actualizar categoría.');
+        this.isSaving.set(false);
+      },
+    });
+  }
+
+  toggleEstadoCategoria(cat: Categoria): void {
+    this.svc.toggleActivoCategoria(cat.id).subscribe({
+      next: () => {
+        this.svc.getCategorias().subscribe(data => this.categorias.set(data));
+      },
+      error: err => {
+        this.errorMsg.set(err?.error?.message ?? 'Error al cambiar estado.');
       },
     });
   }
@@ -484,13 +567,71 @@ export class CatalogoDashboardComponent implements OnInit {
       telefono:  raw.telefono  || undefined,
     }).subscribe({
       next: suc => {
-        this.sucursales.update(list => [...list, suc]);
+        this.sucursales.update(list => [...list, suc].sort((a, b) => a.nombre.localeCompare(b.nombre)));
         this.isSaving.set(false);
         this.showModalSucursal.set(false);
       },
       error: (err) => {
         this.saveError.set(err?.error?.message ?? 'Error al crear la sucursal.');
         this.isSaving.set(false);
+      },
+    });
+  }
+
+  // ── Acciones Sucursal (Editar/Toggle) ───────────────────────────────────────
+
+  abrirEditarSucursal(suc: Sucursal): void {
+    this.sucursalSeleccionada.set(suc);
+    this.editarSucursalForm.patchValue({
+      nombre: suc.nombre,
+      direccion: suc.direccion || '',
+      telefono: suc.telefono || '',
+    });
+    this.saveError.set(null);
+    this.showEditarSucursalModal.set(true);
+  }
+
+  cerrarModalEditarSucursal(): void {
+    this.showEditarSucursalModal.set(false);
+    this.sucursalSeleccionada.set(null);
+  }
+
+  guardarEdicionSucursal(): void {
+    if (this.editarSucursalForm.invalid) {
+      this.editarSucursalForm.markAllAsTouched();
+      return;
+    }
+    const suc = this.sucursalSeleccionada();
+    if (!suc) return;
+
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    const raw = this.editarSucursalForm.getRawValue();
+    this.svc.actualizarSucursal(suc.id, {
+      nombre: raw.nombre!,
+      direccion: raw.direccion || undefined,
+      telefono: raw.telefono || undefined,
+    }).subscribe({
+      next: updated => {
+        this.sucursales.update(list => list.map(s => s.id === updated.id ? updated : s).sort((a, b) => a.nombre.localeCompare(b.nombre)));
+        this.isSaving.set(false);
+        this.showEditarSucursalModal.set(false);
+      },
+      error: (err) => {
+        this.saveError.set(err?.error?.message ?? 'Error al actualizar sucursal.');
+        this.isSaving.set(false);
+      },
+    });
+  }
+
+  toggleEstadoSucursal(suc: Sucursal): void {
+    this.svc.toggleActivoSucursal(suc.id).subscribe({
+      next: updated => {
+        this.sucursales.update(list => list.map(s => s.id === updated.id ? updated : s));
+      },
+      error: err => {
+        this.errorMsg.set(err?.error?.message ?? 'Error al cambiar estado.');
       },
     });
   }
@@ -513,27 +654,38 @@ export class CatalogoDashboardComponent implements OnInit {
   /**
    * Nombre de sucursal por ID para mostrar en el badge de stock.
    */
-  getSucursalNombre(sucursalId: number): string {
+  getNombreSucursal(sucursalId: number): string {
     return this.sucursales().find(s => s.id === sucursalId)?.nombre ?? `Suc. ${sucursalId}`;
   }
 
+  getSucursalNombre(sucursalId: number): string {
+    return this.getNombreSucursal(sucursalId);
+  }
+
   /**
-   * Calcula el stock total disponible de un producto sumando el stockInicial
-   * registrado al crear las variantes (dato disponible en el formulario).
-   * En la vista de tabla, las variantes del backend no incluyen stock, por lo
-   * que devolvemos 0 como valor de referencia visual.
+   * Calcula el stock total disponible de un producto sumando el stockDisponible
+   * de cada variante a través de todos los almacenes.
    */
   calcTotalStock(p: Producto): number {
-    // La API no retorna stock en el listado de variantes; retornamos 0 como placeholder.
-    return 0;
+    return p.variantes.reduce((sum, v) => {
+      const stockVariante = v.stocks?.reduce((acc, st) => acc + (st.stockFisico - st.stockReservado), 0) ?? 0;
+      return sum + stockVariante;
+    }, 0);
   }
 
   /**
    * Devuelve los nombres de almacenes que tienen existencias para el producto.
-   * Placeholder: la API de listado no incluye desglose por sucursal en este endpoint.
    */
   getAlmacenesConStock(p: Producto): string[] {
-    return [];
+    const sucursalesIds = new Set<number>();
+    p.variantes.forEach(v => {
+      v.stocks?.forEach(st => {
+        if ((st.stockFisico - st.stockReservado) > 0) {
+          sucursalesIds.add(st.sucursalId);
+        }
+      });
+    });
+    return Array.from(sucursalesIds).map(id => this.getNombreSucursal(id));
   }
 
   /**

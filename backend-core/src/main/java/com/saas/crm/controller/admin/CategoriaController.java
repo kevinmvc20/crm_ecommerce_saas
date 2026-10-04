@@ -71,4 +71,37 @@ public class CategoriaController {
         CategoriaResponse created = categoriaService.registrarCategoria(tenantId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+
+    // ─── PUT /{id} ────────────────────────────────────────────────────────────
+
+    /**
+     * Actualiza una categoría existente.
+     *
+     * <p>PUT {@code /api/v1/admin/categorias/{id}}</p>
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<CategoriaResponse> actualizarCategoria(
+            @AuthenticationPrincipal Usuario usuarioAuth,
+            @PathVariable Integer id,
+            @Valid @RequestBody com.saas.crm.dto.inventario.CategoriaUpdateRequest request) {
+
+        UUID tenantId = usuarioAuth.getTenant().getId();
+        return ResponseEntity.ok(categoriaService.actualizarCategoria(tenantId, id, request));
+    }
+
+    // ─── PATCH /{id}/toggle-activo ────────────────────────────────────────────
+
+    /**
+     * Alterna el estado activo/inactivo de una categoría.
+     *
+     * <p>PATCH {@code /api/v1/admin/categorias/{id}/toggle-activo}</p>
+     */
+    @PatchMapping("/{id}/toggle-activo")
+    public ResponseEntity<CategoriaResponse> toggleActivoCategoria(
+            @AuthenticationPrincipal Usuario usuarioAuth,
+            @PathVariable Integer id) {
+
+        UUID tenantId = usuarioAuth.getTenant().getId();
+        return ResponseEntity.ok(categoriaService.toggleActivoCategoria(tenantId, id));
+    }
 }

@@ -24,6 +24,12 @@ export interface SucursalCreateRequest {
   telefono?: string;
 }
 
+export interface SucursalUpdateRequest {
+  nombre: string;
+  direccion?: string;
+  telefono?: string;
+}
+
 // ─── Categoria ────────────────────────────────────────────────────────────────
 
 /**
@@ -49,6 +55,12 @@ export interface CategoriaCreateRequest {
   nombre: string;
   descripcion?: string;
   /** null o ausente para categorías raíz. */
+  categoriaPadreId?: number | null;
+}
+
+export interface CategoriaUpdateRequest {
+  nombre: string;
+  descripcion?: string;
   categoriaPadreId?: number | null;
 }
 

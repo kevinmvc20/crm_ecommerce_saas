@@ -79,6 +79,57 @@ public class CategoriaService {
         return toResponse(saved);
     }
 
+    // ─── Actualizar Categoría ─────────────────────────────────────────────────
+
+    /**
+     * Actualiza los datos descriptivos de una categoría y opcionalmente su padre.
+     *
+     * @param tenantId UUID del tenant
+     * @param id       ID de la categoría
+     * @param request  payload con los nuevos datos
+     * @return {@link CategoriaResponse} actualizada
+     */
+    @Transactional
+    public CategoriaResponse actualizarCategoria(UUID tenantId, Integer id, com.saas.crm.dto.inventario.CategoriaUpdateRequest request) {
+        Categoria categoria = categoriaRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no encontrada."));
+
+        Categoria padre = null;
+        if (request.categoriaPadreId() != null) {
+            padre = categoriaRepository.findByIdAndTenantId(request.categoriaPadreId(), tenantId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría padre no encontrada."));
+            
+            // Basic circular reference check could go here
+            if (padre.getId().equals(categoria.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Una categoría no puede ser padre de sí misma.");
+            }
+        }
+
+        categoria.setNombre(request.nombre());
+        categoria.setDescripcion(request.descripcion());
+        categoria.setCategoriaPadre(padre);
+
+        return toResponse(categoriaRepository.save(categoria));
+    }
+
+    // ─── Toggle Activo Categoría ──────────────────────────────────────────────
+
+    /**
+     * Alterna el estado activo/inactivo de una categoría.
+     *
+     * @param tenantId UUID del tenant
+     * @param id       ID de la categoría
+     * @return {@link CategoriaResponse} con el nuevo estado
+     */
+    @Transactional
+    public CategoriaResponse toggleActivoCategoria(UUID tenantId, Integer id) {
+        Categoria categoria = categoriaRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no encontrada."));
+        
+        categoria.setActivo(!categoria.getActivo());
+        return toResponse(categoriaRepository.save(categoria));
+    }
+
     // ─── Mappers ──────────────────────────────────────────────────────────────
 
     /** Convierte recursivamente una {@link Categoria} en su DTO de respuesta. */

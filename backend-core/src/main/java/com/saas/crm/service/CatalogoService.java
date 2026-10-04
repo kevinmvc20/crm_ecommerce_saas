@@ -128,15 +128,15 @@ public class CatalogoService {
             VarianteProducto varianteSaved = varianteProductoRepository.save(variante);
 
             // Inicializar stock si se especificó una sucursal y stock > 0
-            if (vReq.sucursalIdInicial() != null
+            if (vReq.getSucursalEfectiva() != null
                     && vReq.stockInicial() != null
                     && vReq.stockInicial() > 0) {
 
                 Sucursal sucursal = sucursalRepository
-                        .findByIdAndTenantId(vReq.sucursalIdInicial(), tenantId)
+                        .findByIdAndTenantId(vReq.getSucursalEfectiva(), tenantId)
                         .orElseThrow(() -> new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
-                                "Sucursal '" + vReq.sucursalIdInicial()
+                                "Sucursal '" + vReq.getSucursalEfectiva()
                                 + "' no encontrada o no pertenece al tenant."));
 
                 StockSucursal stock = new StockSucursal();
@@ -375,6 +375,12 @@ public class CatalogoService {
     }
 
     private VarianteResponse toVarianteResponse(VarianteProducto v) {
+        List<StockResponse> stocks = stockSucursalRepository
+                .findByVarianteProductoIdAndTenantId(v.getId(), v.getTenant().getId())
+                .stream()
+                .map(this::toStockResponse)
+                .toList();
+
         return new VarianteResponse(
                 v.getId(),
                 v.getProducto().getId(),
@@ -382,6 +388,7 @@ public class CatalogoService {
                 v.getNombreVariante(),
                 v.getPrecio(),
                 v.getActivo(),
+                stocks,
                 v.getCreatedAt(),
                 v.getUpdatedAt()
         );

@@ -4,8 +4,10 @@ import { Observable } from 'rxjs';
 import {
   Sucursal,
   SucursalCreateRequest,
+  SucursalUpdateRequest,
   Categoria,
   CategoriaCreateRequest,
+  CategoriaUpdateRequest,
   Producto,
   ProductoCreateRequest,
   ProductoUpdateRequest,
@@ -45,6 +47,22 @@ export class InventarioService {
     return this.http.post<Sucursal>(`${BASE}/sucursales`, data);
   }
 
+  /**
+   * Actualiza los datos de una sucursal existente.
+   * PUT /api/v1/admin/sucursales/{id}
+   */
+  actualizarSucursal(id: number, data: SucursalUpdateRequest): Observable<Sucursal> {
+    return this.http.put<Sucursal>(`${BASE}/sucursales/${id}`, data);
+  }
+
+  /**
+   * Alterna el estado activo/inactivo de una sucursal.
+   * PATCH /api/v1/admin/sucursales/{id}/toggle-activo
+   */
+  toggleActivoSucursal(id: number): Observable<Sucursal> {
+    return this.http.patch<Sucursal>(`${BASE}/sucursales/${id}/toggle-activo`, {});
+  }
+
   // ─── Categorías ─────────────────────────────────────────────────────────────
 
   /**
@@ -61,6 +79,22 @@ export class InventarioService {
    */
   crearCategoria(data: CategoriaCreateRequest): Observable<Categoria> {
     return this.http.post<Categoria>(`${BASE}/categorias`, data);
+  }
+
+  /**
+   * Actualiza los datos de una categoría existente.
+   * PUT /api/v1/admin/categorias/{id}
+   */
+  actualizarCategoria(id: number, data: CategoriaUpdateRequest): Observable<Categoria> {
+    return this.http.put<Categoria>(`${BASE}/categorias/${id}`, data);
+  }
+
+  /**
+   * Alterna el estado activo/inactivo de una categoría.
+   * PATCH /api/v1/admin/categorias/{id}/toggle-activo
+   */
+  toggleActivoCategoria(id: number): Observable<Categoria> {
+    return this.http.patch<Categoria>(`${BASE}/categorias/${id}/toggle-activo`, {});
   }
 
   // ─── Productos ──────────────────────────────────────────────────────────────

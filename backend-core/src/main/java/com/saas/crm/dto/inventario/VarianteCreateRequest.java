@@ -29,5 +29,11 @@ public record VarianteCreateRequest(
 
         Integer stockInicial,
 
-        Integer sucursalIdInicial
-) {}
+        Integer sucursalIdInicial,
+        
+        Integer sucursalId
+) {
+    public Integer getSucursalEfectiva() {
+        return sucursalId != null ? sucursalId : sucursalIdInicial;
+    }
+}

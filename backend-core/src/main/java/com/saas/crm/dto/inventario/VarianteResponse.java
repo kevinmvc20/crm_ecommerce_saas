@@ -23,6 +23,7 @@ public record VarianteResponse(
         String nombreVariante,
         BigDecimal precio,
         Boolean activo,
+        java.util.List<StockResponse> stocks,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}

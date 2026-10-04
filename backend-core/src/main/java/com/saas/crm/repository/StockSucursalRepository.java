@@ -48,4 +48,13 @@ public interface StockSucursalRepository extends JpaRepository<StockSucursal, Lo
      * @return lista de stocks de la sucursal
      */
     List<StockSucursal> findBySucursalIdAndTenantId(Integer sucursalId, UUID tenantId);
+
+    /**
+     * Lista todos los registros de stock de una variante dentro del tenant.
+     *
+     * @param varianteProductoId UUID de la variante
+     * @param tenantId           UUID del tenant
+     * @return lista de stocks de la variante
+     */
+    List<StockSucursal> findByVarianteProductoIdAndTenantId(UUID varianteProductoId, UUID tenantId);
 }

@@ -69,6 +69,46 @@ public class SucursalService {
         return toResponse(saved);
     }
 
+    // ─── Actualizar Sucursal ──────────────────────────────────────────────────
+
+    /**
+     * Actualiza los datos descriptivos de una sucursal existente.
+     *
+     * @param tenantId UUID del tenant
+     * @param id       ID de la sucursal
+     * @param request  payload con los nuevos datos
+     * @return {@link SucursalResponse} actualizada
+     */
+    @Transactional
+    public SucursalResponse actualizarSucursal(UUID tenantId, Integer id, com.saas.crm.dto.inventario.SucursalUpdateRequest request) {
+        Sucursal sucursal = sucursalRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sucursal no encontrada."));
+
+        sucursal.setNombre(request.nombre());
+        sucursal.setDireccion(request.direccion());
+        sucursal.setTelefono(request.telefono());
+
+        return toResponse(sucursalRepository.save(sucursal));
+    }
+
+    // ─── Toggle Activo Sucursal ───────────────────────────────────────────────
+
+    /**
+     * Alterna el estado activo/inactivo de una sucursal.
+     *
+     * @param tenantId UUID del tenant
+     * @param id       ID de la sucursal
+     * @return {@link SucursalResponse} con el nuevo estado
+     */
+    @Transactional
+    public SucursalResponse toggleActivoSucursal(UUID tenantId, Integer id) {
+        Sucursal sucursal = sucursalRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sucursal no encontrada."));
+
+        sucursal.setActivo(!sucursal.getActivo());
+        return toResponse(sucursalRepository.save(sucursal));
+    }
+
     // ─── Mappers ──────────────────────────────────────────────────────────────
 
     private SucursalResponse toResponse(Sucursal s) {
