@@ -13,6 +13,7 @@ import {
   Categoria,
   Producto,
   VarianteProducto,
+  StockSucursal,
 } from '../../../core/models/inventario.models';
 
 /** Tipo de pestaña activa */
@@ -47,16 +48,64 @@ export class CatalogoDashboardComponent implements OnInit {
   readonly categorias   = signal<Categoria[]>([]);
   readonly sucursales   = signal<Sucursal[]>([]);
 
-  // ── Modales ──────────────────────────────────────────────────────────────────
+  // ── Modales existentes ───────────────────────────────────────────────────────
   readonly showModalProducto  = signal(false);
   readonly showModalCategoria = signal(false);
   readonly showModalSucursal  = signal(false);
   readonly isSaving           = signal(false);
   readonly saveError          = signal<string | null>(null);
 
+  // ── Nuevos Signals para Módulo 4 ─────────────────────────────────────────────
+
+  /** IDs de productos con la sub-fila acordeón abierta. */
+  readonly expandedProductIds = signal<Set<string>>(new Set());
+
+  /** Controla visibilidad del modal de añadir variante. */
+  readonly showVarianteModal = signal<boolean>(false);
+
+  /** Controla visibilidad del modal de ajuste de stock. */
+  readonly showAjusteStockModal = signal<boolean>(false);
+
+  /** Controla visibilidad del modal de editar producto. */
+  readonly showEditarProductoModal = signal<boolean>(false);
+
+  /** Producto seleccionado actualmente para operar sobre él. */
+  readonly productoSeleccionado = signal<Producto | null>(null);
+
+  /** Variante seleccionada para el modal de ajuste de stock. */
+  readonly varianteSeleccionada = signal<VarianteProducto | null>(null);
+
+  // ── Formulario: Añadir Variante Adicional ───────────────────────────────────
+  readonly varianteAdicionalForm = this.fb.group({
+    sku:             ['', [Validators.required, Validators.maxLength(60)]],
+    nombreVariante:  ['', [Validators.required, Validators.maxLength(100)]],
+    precio:          [0, [Validators.required, Validators.min(0)]],
+    stockInicial:    [null as number | null],
+    sucursalId:      [null as number | null],
+  });
+
+  // ── Formulario: Ajustar Stock ───────────────────────────────────────────────
+  readonly ajusteStockForm = this.fb.group({
+    sucursalId:       [null as number | null, Validators.required],
+    nuevoStockFisico: [0, [Validators.required, Validators.min(0)]],
+    stockMinimo:      [0, [Validators.required, Validators.min(0)]],
+  });
+
+  // ── Formulario: Editar Producto ─────────────────────────────────────────────
+  readonly editarProductoForm = this.fb.group({
+    nombre:      ['', [Validators.required, Validators.maxLength(150)]],
+    descripcion: [''],
+    categoriaId: [null as number | null],
+  });
+
   // ── Categorías aplanadas (para selector en modal producto) ──────────────────
   readonly categoriasFlat = computed<CategoriaFlat[]>(() =>
     this.flattenCategorias(this.categorias(), 0)
+  );
+
+  /** Solo categorías de primer nivel (raíces) para el selector de categoría padre */
+  readonly categoriasRaiz = computed<CategoriaFlat[]>(() =>
+    this.categoriasFlat().filter(c => c.level === 0)
   );
 
   // ── Computed: stock total por producto ──────────────────────────────────────
@@ -64,6 +113,8 @@ export class CatalogoDashboardComponent implements OnInit {
     this.productos().map(p => ({
       ...p,
       totalVariantes: p.variantes.length,
+      totalStock: this.calcTotalStock(p),
+      almacenesConStock: this.getAlmacenesConStock(p),
     }))
   );
 
@@ -130,7 +181,190 @@ export class CatalogoDashboardComponent implements OnInit {
     this.activeTab.set(tab);
   }
 
-  // ── Modal Producto ──────────────────────────────────────────────────────────
+  // ── Acordeón (Expand / Collapse) ────────────────────────────────────────────
+
+  /**
+   * Abre o cierra la sub-fila de detalle de variantes para el producto indicado.
+   * Usa inmutabilidad creando un nuevo Set en cada toggleado.
+   */
+  toggleExpand(prodId: string): void {
+    this.expandedProductIds.update(set => {
+      const next = new Set(set);
+      if (next.has(prodId)) {
+        next.delete(prodId);
+      } else {
+        next.add(prodId);
+      }
+      return next;
+    });
+  }
+
+  isExpanded(prodId: string): boolean {
+    return this.expandedProductIds().has(prodId);
+  }
+
+  // ── Modal: Añadir Variante Adicional ───────────────────────────────────────
+
+  abrirModalVariante(prod: Producto): void {
+    this.productoSeleccionado.set(prod);
+    this.varianteAdicionalForm.reset({ sku: '', nombreVariante: '', precio: 0, stockInicial: null, sucursalId: null });
+    this.saveError.set(null);
+    this.showVarianteModal.set(true);
+  }
+
+  cerrarModalVariante(): void {
+    this.showVarianteModal.set(false);
+    this.productoSeleccionado.set(null);
+  }
+
+  submitVariante(): void {
+    if (this.varianteAdicionalForm.invalid) {
+      this.varianteAdicionalForm.markAllAsTouched();
+      return;
+    }
+    const prod = this.productoSeleccionado();
+    if (!prod) return;
+
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    const raw = this.varianteAdicionalForm.getRawValue();
+    this.svc.agregarVariante(prod.id, {
+      sku:            raw.sku!,
+      nombreVariante: raw.nombreVariante!,
+      precio:         Number(raw.precio),
+      stockInicial:   raw.stockInicial ? Number(raw.stockInicial) : undefined,
+      sucursalId:     raw.sucursalId ? Number(raw.sucursalId) : undefined,
+    }).subscribe({
+      next: nuevaVariante => {
+        // Actualizar la lista de productos en el signal sin recargar todo
+        this.productos.update(list =>
+          list.map(p =>
+            p.id === prod.id
+              ? { ...p, variantes: [...p.variantes, nuevaVariante] }
+              : p
+          )
+        );
+        this.isSaving.set(false);
+        this.showVarianteModal.set(false);
+      },
+      error: err => {
+        this.saveError.set(err?.error?.message ?? 'Error al agregar la variante.');
+        this.isSaving.set(false);
+      },
+    });
+  }
+
+  // ── Modal: Ajustar Stock ────────────────────────────────────────────────────
+
+  abrirModalAjusteStock(prod: Producto, variante: VarianteProducto): void {
+    this.productoSeleccionado.set(prod);
+    this.varianteSeleccionada.set(variante);
+    this.ajusteStockForm.reset({ sucursalId: null, nuevoStockFisico: 0, stockMinimo: 5 });
+    this.saveError.set(null);
+    this.showAjusteStockModal.set(true);
+  }
+
+  cerrarModalAjusteStock(): void {
+    this.showAjusteStockModal.set(false);
+    this.varianteSeleccionada.set(null);
+    this.productoSeleccionado.set(null);
+  }
+
+  submitAjusteStock(): void {
+    if (this.ajusteStockForm.invalid) {
+      this.ajusteStockForm.markAllAsTouched();
+      return;
+    }
+    const variante = this.varianteSeleccionada();
+    if (!variante) return;
+
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    const raw = this.ajusteStockForm.getRawValue();
+    this.svc.ajustarStock(variante.id, Number(raw.sucursalId), {
+      nuevoStockFisico: Number(raw.nuevoStockFisico),
+      stockMinimo:      Number(raw.stockMinimo),
+    }).subscribe({
+      next: _stockActualizado => {
+        this.isSaving.set(false);
+        this.showAjusteStockModal.set(false);
+        // Recargar lista completa para reflejar stock actualizado
+        this.svc.getProductos().subscribe({ next: data => this.productos.set(data) });
+      },
+      error: err => {
+        this.saveError.set(err?.error?.message ?? 'Error al ajustar el stock.');
+        this.isSaving.set(false);
+      },
+    });
+  }
+
+  // ── Modal: Editar Producto ──────────────────────────────────────────────────
+
+  abrirModalEditar(prod: Producto): void {
+    this.productoSeleccionado.set(prod);
+    this.editarProductoForm.reset({
+      nombre:      prod.nombre,
+      descripcion: prod.descripcion ?? '',
+      categoriaId: prod.categoriaId,
+    });
+    this.saveError.set(null);
+    this.showEditarProductoModal.set(true);
+  }
+
+  cerrarModalEditar(): void {
+    this.showEditarProductoModal.set(false);
+    this.productoSeleccionado.set(null);
+  }
+
+  submitEditar(): void {
+    if (this.editarProductoForm.invalid) {
+      this.editarProductoForm.markAllAsTouched();
+      return;
+    }
+    const prod = this.productoSeleccionado();
+    if (!prod) return;
+
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    const raw = this.editarProductoForm.getRawValue();
+    this.svc.actualizarProducto(prod.id, {
+      nombre:      raw.nombre!,
+      descripcion: raw.descripcion || undefined,
+      categoriaId: raw.categoriaId ?? undefined,
+    }).subscribe({
+      next: updated => {
+        this.productos.update(list =>
+          list.map(p => p.id === updated.id ? { ...updated, variantes: p.variantes } : p)
+        );
+        this.isSaving.set(false);
+        this.showEditarProductoModal.set(false);
+      },
+      error: err => {
+        this.saveError.set(err?.error?.message ?? 'Error al actualizar el producto.');
+        this.isSaving.set(false);
+      },
+    });
+  }
+
+  // ── Toggle Estado Producto ──────────────────────────────────────────────────
+
+  toggleEstadoProducto(prod: Producto): void {
+    this.svc.toggleActivoProducto(prod.id).subscribe({
+      next: updated => {
+        this.productos.update(list =>
+          list.map(p => p.id === updated.id ? { ...updated, variantes: p.variantes } : p)
+        );
+      },
+      error: err => {
+        this.errorMsg.set(err?.error?.message ?? 'Error al cambiar el estado del producto.');
+      },
+    });
+  }
+
+  // ── Modal Producto (crear nuevo) ────────────────────────────────────────────
 
   openModalProducto(): void {
     this.productoForm.reset({ nombre: '', descripcion: '', categoriaId: null });
@@ -274,6 +508,55 @@ export class CatalogoDashboardComponent implements OnInit {
   /** Controles de un grupo de variante */
   getVarianteControls(i: number): { [key: string]: AbstractControl } {
     return (this.variantesArray.at(i) as any).controls;
+  }
+
+  /**
+   * Nombre de sucursal por ID para mostrar en el badge de stock.
+   */
+  getSucursalNombre(sucursalId: number): string {
+    return this.sucursales().find(s => s.id === sucursalId)?.nombre ?? `Suc. ${sucursalId}`;
+  }
+
+  /**
+   * Calcula el stock total disponible de un producto sumando el stockInicial
+   * registrado al crear las variantes (dato disponible en el formulario).
+   * En la vista de tabla, las variantes del backend no incluyen stock, por lo
+   * que devolvemos 0 como valor de referencia visual.
+   */
+  calcTotalStock(p: Producto): number {
+    // La API no retorna stock en el listado de variantes; retornamos 0 como placeholder.
+    return 0;
+  }
+
+  /**
+   * Devuelve los nombres de almacenes que tienen existencias para el producto.
+   * Placeholder: la API de listado no incluye desglose por sucursal en este endpoint.
+   */
+  getAlmacenesConStock(p: Producto): string[] {
+    return [];
+  }
+
+  /**
+   * Verifica si alguna variante del formulario tiene stockInicial > 0
+   * pero sin sucursalIdInicial asignada.
+   */
+  hasVariantesSinSucursal(): boolean {
+    return this.variantesArray.controls.some(ctrl => {
+      const stock = ctrl.get('stockInicial')?.value;
+      const sucursal = ctrl.get('sucursalIdInicial')?.value;
+      return (stock !== null && Number(stock) > 0) && !sucursal;
+    });
+  }
+
+  /**
+   * Determina si el campo sucursalIdInicial de una variante es inválido
+   * (stockInicial > 0 pero sucursal vacía y el campo fue tocado o el form fue enviado).
+   */
+  isSucursalRequerida(index: number): boolean {
+    const ctrl = this.variantesArray.at(index);
+    const stock = ctrl.get('stockInicial')?.value;
+    const sucursal = ctrl.get('sucursalIdInicial')?.value;
+    return (stock !== null && Number(stock) > 0) && !sucursal;
   }
 
   /** Convierte árbol recursivo a lista plana con nivel de indentación */

@@ -57,6 +57,7 @@ export interface CategoriaCreateRequest {
 /**
  * Variante de compra de un producto (talla, color, capacidad, etc.).
  * Mapea el record VarianteResponse de Java.
+ * `stocks` es populado opcionalmente al expandir la fila del acordeón.
  */
 export interface VarianteProducto {
   id: string;
@@ -67,6 +68,8 @@ export interface VarianteProducto {
   activo: boolean;
   createdAt: string; // ISO-8601
   updatedAt: string; // ISO-8601
+  /** Desglose de existencias por sucursal (cargado bajo demanda). */
+  stocks?: StockSucursal[];
 }
 
 /**
@@ -80,6 +83,18 @@ export interface VarianteCreateRequest {
   stockInicial?: number;
   /** Sucursal donde registrar el stock inicial (requerido si stockInicial > 0). */
   sucursalIdInicial?: number;
+}
+
+/**
+ * Payload para POST /api/v1/admin/productos/{id}/variantes.
+ * Agrega una variante adicional a un producto existente.
+ */
+export interface VarianteAdicionalRequest {
+  sku: string;
+  nombreVariante: string;
+  precio: number;
+  stockInicial?: number;
+  sucursalId?: number;
 }
 
 // ─── Producto ─────────────────────────────────────────────────────────────────
@@ -108,6 +123,16 @@ export interface ProductoCreateRequest {
   descripcion?: string;
   categoriaId?: number | null;
   variantes: VarianteCreateRequest[];
+}
+
+/**
+ * Payload para PUT /api/v1/admin/productos/{id}.
+ * Actualiza únicamente los datos descriptivos del producto.
+ */
+export interface ProductoUpdateRequest {
+  nombre: string;
+  descripcion?: string;
+  categoriaId?: number | null;
 }
 
 // ─── Stock por Sucursal ───────────────────────────────────────────────────────

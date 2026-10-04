@@ -150,16 +150,42 @@
       <table class="min-w-full divide-y divide-slate-200" aria-label="Tabla de productos">
         <thead class="bg-slate-50">
           <tr>
-            <th scope="col" class="py-3 pl-6 pr-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Producto</th>
-            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Variantes / SKU</th>
+            <!-- Columna expandir -->
+            <th scope="col" class="w-10 py-3 pl-4 pr-2 text-left">
+              <span class="sr-only">Expandir</span>
+            </th>
+            <th scope="col" class="py-3 pl-2 pr-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Producto</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Variantes</th>
             <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Precio base</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Stock total</th>
             <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Estado</th>
+            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Acciones</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 bg-white">
           @for (p of productosConStock(); track p.id) {
-          <tr class="group transition-colors hover:bg-slate-50/60">
-            <td class="py-4 pl-6 pr-3">
+
+          <!-- ── Fila principal del producto ── -->
+          <tr class="group transition-colors hover:bg-slate-50/60"
+            [class.bg-blue-50]="isExpanded(p.id)">
+
+            <!-- Chevron expandir -->
+            <td class="py-4 pl-4 pr-2">
+              <button type="button"
+                class="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [attr.aria-expanded]="isExpanded(p.id)"
+                [attr.aria-label]="(isExpanded(p.id) ? 'Colapsar' : 'Expandir') + ' variantes de ' + p.nombre"
+                (click)="toggleExpand(p.id)">
+                <svg class="h-4 w-4 transition-transform duration-200"
+                  [class.rotate-90]="isExpanded(p.id)"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+            </td>
+
+            <!-- Nombre + descripción -->
+            <td class="py-4 pl-2 pr-3 cursor-pointer" (click)="toggleExpand(p.id)">
               <div class="flex flex-col">
                 <span class="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{{ p.nombre }}</span>
                 @if (p.descripcion) {
@@ -167,16 +193,15 @@
                 }
               </div>
             </td>
+
+            <!-- Conteo variantes -->
             <td class="px-3 py-4">
-              <div class="flex flex-wrap gap-1.5">
-                @for (v of p.variantes; track v.id) {
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
-                  {{ v.sku }}
-                </span>
-                }
-              </div>
-              <p class="mt-1 text-xs text-slate-400">{{ p.totalVariantes }} variante{{ p.totalVariantes !== 1 ? 's' : '' }}</p>
+              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">
+                {{ p.totalVariantes }} {{ p.totalVariantes !== 1 ? 'variantes' : 'variante' }}
+              </span>
             </td>
+
+            <!-- Precio base -->
             <td class="px-3 py-4 text-sm font-medium text-slate-700">
               @if (p.variantes.length > 0) {
                 {{ formatPrecio(p.variantes[0].precio) }}
@@ -184,6 +209,28 @@
                 <span class="text-slate-400">—</span>
               }
             </td>
+
+            <!-- Stock total -->
+            <td class="px-3 py-4">
+              @if (p.totalStock > 5) {
+              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
+                {{ p.totalStock }} uds.
+              </span>
+              } @else if (p.totalStock > 0) {
+              <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>
+                {{ p.totalStock }} uds. (bajo)
+              </span>
+              } @else {
+              <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-200">
+                <span class="h-1.5 w-1.5 rounded-full bg-slate-400" aria-hidden="true"></span>
+                Sin stock
+              </span>
+              }
+            </td>
+
+            <!-- Estado activo/inactivo -->
             <td class="px-3 py-4">
               @if (p.activo) {
               <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
@@ -197,8 +244,140 @@
               </span>
               }
             </td>
+
+            <!-- Acciones -->
+            <td class="px-3 py-4">
+              <div class="flex items-center justify-end gap-1.5">
+
+                <!-- Editar producto -->
+                <button type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  [attr.id]="'btn-editar-' + p.id"
+                  [attr.aria-label]="'Editar producto ' + p.nombre"
+                  (click)="abrirModalEditar(p)">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                  </svg>
+                  Editar
+                </button>
+
+                <!-- Añadir variante -->
+                <button type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 shadow-sm transition-colors hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  [attr.id]="'btn-variante-' + p.id"
+                  [attr.aria-label]="'Añadir variante a ' + p.nombre"
+                  (click)="abrirModalVariante(p)">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  + Variante
+                </button>
+
+                <!-- Desactivar / Activar -->
+                <button type="button"
+                  [class]="p.activo
+                    ? 'inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 shadow-sm transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400'
+                    : 'inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400'"
+                  [attr.id]="'btn-toggle-' + p.id"
+                  [attr.aria-label]="(p.activo ? 'Desactivar' : 'Activar') + ' producto ' + p.nombre"
+                  (click)="toggleEstadoProducto(p)">
+                  @if (p.activo) {
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  Desactivar
+                  } @else {
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Activar
+                  }
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- ── Sub-fila expandible: detalle de variantes ── -->
+          @if (isExpanded(p.id)) {
+          <tr class="bg-slate-50/70">
+            <td colspan="7" class="px-4 pb-4 pt-0">
+              <div class="overflow-hidden rounded-lg border border-slate-200/70 bg-white">
+
+                @if (p.variantes.length === 0) {
+                <div class="flex items-center gap-2 px-4 py-4 text-sm text-slate-400 italic">
+                  <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                  Este producto no tiene variantes. Haz clic en "+ Variante" para añadir.
+                </div>
+                } @else {
+                <table class="min-w-full divide-y divide-slate-100" [attr.aria-label]="'Variantes de ' + p.nombre">
+                  <thead class="bg-slate-50/80">
+                    <tr>
+                      <th scope="col" class="py-2.5 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">SKU</th>
+                      <th scope="col" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Variante</th>
+                      <th scope="col" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Precio</th>
+                      <th scope="col" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Existencias por Almacén</th>
+                      <th scope="col" class="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-50">
+                    @for (v of p.variantes; track v.id) {
+                    <tr class="transition-colors hover:bg-blue-50/30">
+                      <!-- SKU -->
+                      <td class="py-3 pl-4 pr-3">
+                        <code class="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-700">{{ v.sku }}</code>
+                      </td>
+                      <!-- Nombre variante -->
+                      <td class="px-3 py-3 text-sm text-slate-700">{{ v.nombreVariante }}</td>
+                      <!-- Precio -->
+                      <td class="px-3 py-3 text-sm font-medium text-slate-800">{{ formatPrecio(v.precio) }}</td>
+                      <!-- Existencias por almacén -->
+                      <td class="px-3 py-3">
+                        @if (v.stocks && v.stocks.length > 0) {
+                        <div class="flex flex-wrap gap-1.5">
+                          @for (stock of v.stocks; track stock.id) {
+                          <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
+                            [class]="stock.stockDisponible > stock.stockMinimo
+                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                              : stock.stockDisponible > 0
+                                ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                                : 'bg-red-50 text-red-700 ring-red-200'">
+                            <span class="h-1 w-1 rounded-full"
+                              [class]="stock.stockDisponible > stock.stockMinimo ? 'bg-emerald-500' : stock.stockDisponible > 0 ? 'bg-amber-500' : 'bg-red-500'"
+                              aria-hidden="true"></span>
+                            {{ getSucursalNombre(stock.sucursalId) }}: {{ stock.stockDisponible }}
+                          </span>
+                          }
+                        </div>
+                        } @else {
+                        <span class="text-xs text-slate-400 italic">Sin registros de stock</span>
+                        }
+                      </td>
+                      <!-- Acción ajustar stock -->
+                      <td class="px-3 py-3 text-right">
+                        <button type="button"
+                          class="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 shadow-sm transition-colors hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                          [attr.id]="'btn-stock-' + v.id"
+                          [attr.aria-label]="'Ajustar stock de variante ' + v.nombreVariante"
+                          (click)="abrirModalAjusteStock(p, v)">
+                          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                          </svg>
+                          Ajustar Stock
+                        </button>
+                      </td>
+                    </tr>
+                    }
+                  </tbody>
+                </table>
+                }
+              </div>
+            </td>
           </tr>
           }
+
+          } <!-- end @for productos -->
         </tbody>
       </table>
       }
@@ -349,10 +528,10 @@
 @if (showModalProducto()) {
 <div id="modal-producto" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
   role="dialog" aria-modal="true" aria-labelledby="modal-producto-title">
-  <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+  <div class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
 
-    <!-- Cabecera modal -->
-    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+    <!-- Cabecera modal (sticky) -->
+    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4 rounded-t-2xl">
       <div>
         <h2 id="modal-producto-title" class="text-base font-bold text-slate-800">Nuevo Producto</h2>
         <p class="text-xs text-slate-500">Completa los datos del producto y al menos una variante.</p>
@@ -365,8 +544,8 @@
       </button>
     </div>
 
-    <!-- Formulario -->
-    <form id="form-nuevo-producto" [formGroup]="productoForm" (ngSubmit)="submitProducto()" class="px-6 py-5 space-y-5" novalidate>
+    <!-- Formulario (cuerpo scrollable) -->
+    <form id="form-nuevo-producto" [formGroup]="productoForm" (ngSubmit)="submitProducto()" class="overflow-y-auto flex-1 px-6 py-4 pr-3 space-y-5" novalidate>
 
       <!-- Error de guardado -->
       @if (saveError()) {
@@ -465,14 +644,24 @@
               </div>
               <!-- Sucursal inicial -->
               <div>
-                <label [for]="'v-sucursal-' + $index" class="mb-1 block text-xs font-medium text-slate-600">Sucursal</label>
+                <label [for]="'v-sucursal-' + $index" class="mb-1 block text-xs font-medium text-slate-600">
+                  Sucursal
+                  @if (isSucursalRequerida($index)) {
+                  <span class="text-red-500"> *</span>
+                  }
+                </label>
                 <select [id]="'v-sucursal-' + $index" formControlName="sucursalIdInicial"
-                  class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors">
+                  [ngClass]="isSucursalRequerida($index)
+                    ? 'block w-full rounded-lg border border-red-500 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors'
+                    : 'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors'">
                   <option [ngValue]="null">— Ninguna —</option>
                   @for (suc of sucursales(); track suc.id) {
                   <option [ngValue]="suc.id">{{ suc.nombre }}</option>
                   }
                 </select>
+                @if (isSucursalRequerida($index)) {
+                <p class="mt-1 text-xs text-red-600">Debe seleccionar la sucursal para asignar las existencias iniciales.</p>
+                }
               </div>
             </div>
           </div>
@@ -480,28 +669,332 @@
         </div>
       </div>
 
-      <!-- Acciones -->
-      <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
-        <button type="button"
-          class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-          (click)="closeModalProducto()" [disabled]="isSaving()">
-          Cancelar
-        </button>
-        <button type="submit"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-          [disabled]="isSaving()">
-          @if (isSaving()) {
-          <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-          </svg>
-          Guardando…
-          } @else {
-          Crear Producto
+      <!-- Acciones (pie sticky) -->
+    </form>
+
+    <!-- Pie del modal (sticky) -->
+    <div class="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 rounded-b-2xl">
+      <button type="button"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+        (click)="closeModalProducto()" [disabled]="isSaving()">
+        Cancelar
+      </button>
+      <button type="submit" form="form-nuevo-producto"
+        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        [disabled]="isSaving() || hasVariantesSinSucursal()">
+        @if (isSaving()) {
+        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Guardando…
+        } @else {
+        Crear Producto
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║              MODAL: EDITAR PRODUCTO                              ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+@if (showEditarProductoModal()) {
+<div id="modal-editar-producto" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+  role="dialog" aria-modal="true" aria-labelledby="modal-editar-title">
+  <div class="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
+
+    <!-- Cabecera -->
+    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4 rounded-t-2xl">
+      <div>
+        <h2 id="modal-editar-title" class="text-base font-bold text-slate-800">Editar Producto</h2>
+        <p class="text-xs text-slate-500">
+          Modifica nombre, descripción y categoría de
+          <strong>{{ productoSeleccionado()?.nombre }}</strong>.
+        </p>
+      </div>
+      <button type="button" class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+        (click)="cerrarModalEditar()" aria-label="Cerrar modal editar producto">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo -->
+    <form id="form-editar-producto" [formGroup]="editarProductoForm" (ngSubmit)="submitEditar()"
+      class="overflow-y-auto flex-1 px-6 py-5 space-y-5" novalidate>
+
+      @if (saveError()) {
+      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      }
+
+      <!-- Nombre -->
+      <div>
+        <label for="edit-nombre" class="block text-sm font-medium text-slate-700 mb-1.5">Nombre <span class="text-red-500">*</span></label>
+        <input id="edit-nombre" type="text" formControlName="nombre" placeholder="Nombre del producto"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+          [class.border-red-400]="editarProductoForm.get('nombre')?.invalid && editarProductoForm.get('nombre')?.touched" />
+        @if (editarProductoForm.get('nombre')?.invalid && editarProductoForm.get('nombre')?.touched) {
+        <p class="mt-1 text-xs text-red-600">El nombre es obligatorio (máx. 150 caracteres).</p>
+        }
+      </div>
+
+      <!-- Descripción -->
+      <div>
+        <label for="edit-desc" class="block text-sm font-medium text-slate-700 mb-1.5">Descripción <span class="text-slate-400 font-normal">(opcional)</span></label>
+        <textarea id="edit-desc" formControlName="descripcion" rows="3" placeholder="Descripción del producto…"
+          class="block w-full resize-none rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"></textarea>
+      </div>
+
+      <!-- Categoría -->
+      <div>
+        <label for="edit-categoria" class="block text-sm font-medium text-slate-700 mb-1.5">Categoría <span class="text-slate-400 font-normal">(opcional)</span></label>
+        <select id="edit-categoria" formControlName="categoriaId"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors">
+          <option [ngValue]="null">— Sin categoría —</option>
+          @for (cat of categoriasFlat(); track cat.id) {
+          <option [ngValue]="cat.id">
+            {{ '  '.repeat(cat.level) }}{{ cat.level > 0 ? '↳ ' : '' }}{{ cat.label }}
+          </option>
           }
-        </button>
+        </select>
       </div>
     </form>
+
+    <!-- Pie -->
+    <div class="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 rounded-b-2xl">
+      <button type="button"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+        (click)="cerrarModalEditar()" [disabled]="isSaving()">Cancelar</button>
+      <button type="submit" form="form-editar-producto"
+        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        [disabled]="isSaving()">
+        @if (isSaving()) {
+        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Guardando…
+        } @else {
+        Guardar Cambios
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║              MODAL: + NUEVA VARIANTE                             ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+@if (showVarianteModal()) {
+<div id="modal-nueva-variante" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+  role="dialog" aria-modal="true" aria-labelledby="modal-variante-title">
+  <div class="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
+
+    <!-- Cabecera -->
+    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4 rounded-t-2xl">
+      <div>
+        <h2 id="modal-variante-title" class="text-base font-bold text-slate-800">Nueva Variante</h2>
+        <p class="text-xs text-slate-500">
+          Agrega una variante a
+          <strong>{{ productoSeleccionado()?.nombre }}</strong>.
+        </p>
+      </div>
+      <button type="button" class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+        (click)="cerrarModalVariante()" aria-label="Cerrar modal nueva variante">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo -->
+    <form id="form-nueva-variante" [formGroup]="varianteAdicionalForm" (ngSubmit)="submitVariante()"
+      class="overflow-y-auto flex-1 px-6 py-5 space-y-4" novalidate>
+
+      @if (saveError()) {
+      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      }
+
+      <!-- Información adicional -->
+      <div class="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs text-indigo-700">
+        <strong>Importante:</strong> El SKU debe ser único dentro del tenant para evitar conflictos de inventario.
+      </div>
+
+      <!-- SKU -->
+      <div>
+        <label for="var-sku" class="block text-sm font-medium text-slate-700 mb-1.5">SKU <span class="text-red-500">*</span></label>
+        <input id="var-sku" type="text" formControlName="sku" placeholder="Ej. CAMP-L-AZUL"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+          [class.border-red-400]="varianteAdicionalForm.get('sku')?.invalid && varianteAdicionalForm.get('sku')?.touched" />
+        @if (varianteAdicionalForm.get('sku')?.invalid && varianteAdicionalForm.get('sku')?.touched) {
+        <p class="mt-1 text-xs text-red-600">El SKU es obligatorio (máx. 60 caracteres).</p>
+        }
+      </div>
+
+      <!-- Nombre variante -->
+      <div>
+        <label for="var-nombre" class="block text-sm font-medium text-slate-700 mb-1.5">Nombre de variante <span class="text-red-500">*</span></label>
+        <input id="var-nombre" type="text" formControlName="nombreVariante" placeholder="Ej. Talla L / Color Azul"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+          [class.border-red-400]="varianteAdicionalForm.get('nombreVariante')?.invalid && varianteAdicionalForm.get('nombreVariante')?.touched" />
+      </div>
+
+      <!-- Precio -->
+      <div>
+        <label for="var-precio" class="block text-sm font-medium text-slate-700 mb-1.5">Precio <span class="text-red-500">*</span></label>
+        <input id="var-precio" type="number" formControlName="precio" min="0" step="0.01" placeholder="0.00"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors" />
+      </div>
+
+      <!-- Stock inicial + Sucursal -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="var-stock" class="block text-sm font-medium text-slate-700 mb-1.5">Stock inicial <span class="text-slate-400 font-normal">(opcional)</span></label>
+          <input id="var-stock" type="number" formControlName="stockInicial" min="0" placeholder="0"
+            class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors" />
+        </div>
+        <div>
+          <label for="var-sucursal" class="block text-sm font-medium text-slate-700 mb-1.5">Sucursal <span class="text-slate-400 font-normal">(si hay stock)</span></label>
+          <select id="var-sucursal" formControlName="sucursalId"
+            class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors">
+            <option [ngValue]="null">— Ninguna —</option>
+            @for (suc of sucursales(); track suc.id) {
+            <option [ngValue]="suc.id">{{ suc.nombre }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </form>
+
+    <!-- Pie -->
+    <div class="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 rounded-b-2xl">
+      <button type="button"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+        (click)="cerrarModalVariante()" [disabled]="isSaving()">Cancelar</button>
+      <button type="submit" form="form-nueva-variante"
+        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        [disabled]="isSaving()">
+        @if (isSaving()) {
+        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Guardando…
+        } @else {
+        Agregar Variante
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║              MODAL: AJUSTAR STOCK                                ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+@if (showAjusteStockModal()) {
+<div id="modal-ajuste-stock" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+  role="dialog" aria-modal="true" aria-labelledby="modal-stock-title">
+  <div class="w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
+
+    <!-- Cabecera -->
+    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4 rounded-t-2xl">
+      <div>
+        <h2 id="modal-stock-title" class="text-base font-bold text-slate-800">Ajustar Stock</h2>
+        <p class="text-xs text-slate-500">
+          Variante:
+          <strong>{{ varianteSeleccionada()?.nombreVariante }}</strong>
+          (SKU: {{ varianteSeleccionada()?.sku }})
+        </p>
+      </div>
+      <button type="button" class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+        (click)="cerrarModalAjusteStock()" aria-label="Cerrar modal ajuste stock">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo -->
+    <form id="form-ajuste-stock" [formGroup]="ajusteStockForm" (ngSubmit)="submitAjusteStock()"
+      class="overflow-y-auto flex-1 px-6 py-5 space-y-4" novalidate>
+
+      @if (saveError()) {
+      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      }
+
+      <!-- Nota informativa -->
+      <div class="rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 text-xs text-violet-700">
+        <strong>Regla:</strong> El stock físico no puede quedar por debajo del stock reservado por órdenes pendientes.
+      </div>
+
+      <!-- Sucursal -->
+      <div>
+        <label for="stock-sucursal" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Sucursal <span class="text-red-500">*</span>
+        </label>
+        <select id="stock-sucursal" formControlName="sucursalId"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
+          [class.border-red-400]="ajusteStockForm.get('sucursalId')?.invalid && ajusteStockForm.get('sucursalId')?.touched">
+          <option [ngValue]="null">— Seleccionar sucursal —</option>
+          @for (suc of sucursales(); track suc.id) {
+          <option [ngValue]="suc.id">{{ suc.nombre }}</option>
+          }
+        </select>
+        @if (ajusteStockForm.get('sucursalId')?.invalid && ajusteStockForm.get('sucursalId')?.touched) {
+        <p class="mt-1 text-xs text-red-600">Debe seleccionar una sucursal.</p>
+        }
+      </div>
+
+      <!-- Stock físico + Mínimo -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="stock-fisico" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Stock físico <span class="text-red-500">*</span>
+          </label>
+          <input id="stock-fisico" type="number" formControlName="nuevoStockFisico" min="0" placeholder="0"
+            class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
+            [class.border-red-400]="ajusteStockForm.get('nuevoStockFisico')?.invalid && ajusteStockForm.get('nuevoStockFisico')?.touched" />
+          <p class="mt-1 text-xs text-slate-400">Unidades en bodega</p>
+        </div>
+        <div>
+          <label for="stock-minimo" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Stock mínimo <span class="text-red-500">*</span>
+          </label>
+          <input id="stock-minimo" type="number" formControlName="stockMinimo" min="0" placeholder="5"
+            class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
+            [class.border-red-400]="ajusteStockForm.get('stockMinimo')?.invalid && ajusteStockForm.get('stockMinimo')?.touched" />
+          <p class="mt-1 text-xs text-slate-400">Umbral de alerta</p>
+        </div>
+      </div>
+    </form>
+
+    <!-- Pie -->
+    <div class="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 rounded-b-2xl">
+      <button type="button"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+        (click)="cerrarModalAjusteStock()" [disabled]="isSaving()">Cancelar</button>
+      <button type="submit" form="form-ajuste-stock"
+        class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        [disabled]="isSaving()">
+        @if (isSaving()) {
+        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Guardando…
+        } @else {
+        Guardar Stock
+        }
+      </button>
+    </div>
   </div>
 </div>
 }
@@ -552,10 +1045,11 @@
         <select id="cat-padre" formControlName="categoriaPadreId"
           class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors">
           <option [ngValue]="null">— Categoría raíz —</option>
-          @for (cat of categoriasFlat(); track cat.id) {
-          <option [ngValue]="cat.id">{{ '  '.repeat(cat.level) }}{{ cat.level > 0 ? '↳ ' : '' }}{{ cat.label }}</option>
+          @for (cat of categoriasRaiz(); track cat.id) {
+          <option [ngValue]="cat.id">{{ cat.label }}</option>
           }
         </select>
+        <p class="mt-1 text-xs text-slate-400">Solo se listan categorías de primer nivel para evitar referencias circulares.</p>
       </div>
 
       <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">

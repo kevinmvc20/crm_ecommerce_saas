@@ -8,6 +8,11 @@ import {
   CategoriaCreateRequest,
   Producto,
   ProductoCreateRequest,
+  ProductoUpdateRequest,
+  VarianteProducto,
+  VarianteAdicionalRequest,
+  StockSucursal,
+  AjusteStockRequest,
 } from '../models/inventario.models';
 
 const BASE = 'http://localhost:8080/api/v1/admin';
@@ -75,5 +80,41 @@ export class InventarioService {
    */
   crearProducto(data: ProductoCreateRequest): Observable<Producto> {
     return this.http.post<Producto>(`${BASE}/productos`, data);
+  }
+
+  /**
+   * Actualiza los datos descriptivos de un producto existente.
+   * Solo modifica nombre, descripción y categoría; no afecta variantes ni stock.
+   * PUT /api/v1/admin/productos/{id}
+   */
+  actualizarProducto(id: string, data: ProductoUpdateRequest): Observable<Producto> {
+    return this.http.put<Producto>(`${BASE}/productos/${id}`, data);
+  }
+
+  /**
+   * Alterna el estado activo/inactivo de un producto (baja lógica).
+   * PATCH /api/v1/admin/productos/{id}/toggle-activo
+   */
+  toggleActivoProducto(id: string): Observable<Producto> {
+    return this.http.patch<Producto>(`${BASE}/productos/${id}/toggle-activo`, {});
+  }
+
+  /**
+   * Agrega una variante adicional a un producto existente sin duplicar el base.
+   * POST /api/v1/admin/productos/{id}/variantes
+   */
+  agregarVariante(productoId: string, data: VarianteAdicionalRequest): Observable<VarianteProducto> {
+    return this.http.post<VarianteProducto>(`${BASE}/productos/${productoId}/variantes`, data);
+  }
+
+  /**
+   * Ajusta el stock físico y mínimo de una variante en una sucursal específica.
+   * POST /api/v1/admin/productos/variantes/{varianteId}/stock/sucursales/{sucursalId}
+   */
+  ajustarStock(varianteId: string, sucursalId: number, data: AjusteStockRequest): Observable<StockSucursal> {
+    return this.http.post<StockSucursal>(
+      `${BASE}/productos/variantes/${varianteId}/stock/sucursales/${sucursalId}`,
+      data
+    );
   }
 }

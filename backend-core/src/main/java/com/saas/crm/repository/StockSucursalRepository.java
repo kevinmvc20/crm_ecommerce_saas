@@ -28,6 +28,19 @@ public interface StockSucursalRepository extends JpaRepository<StockSucursal, Lo
     Optional<StockSucursal> findBySucursalIdAndVarianteProductoId(Integer sucursalId, UUID varianteProductoId);
 
     /**
+     * Busca el registro de stock de una variante en una sucursal concreta,
+     * validando además que pertenezca al tenant indicado.
+     * Usado en la operación de ajuste de stock para garantizar aislamiento multi-tenant.
+     *
+     * @param sucursalId         ID de la sucursal
+     * @param varianteProductoId UUID de la variante
+     * @param tenantId           UUID del tenant
+     * @return opcional con el registro de stock si existe
+     */
+    Optional<StockSucursal> findBySucursalIdAndVarianteProductoIdAndTenantId(
+            Integer sucursalId, UUID varianteProductoId, UUID tenantId);
+
+    /**
      * Lista todos los registros de stock de una sucursal dentro del tenant.
      *
      * @param sucursalId ID de la sucursal
