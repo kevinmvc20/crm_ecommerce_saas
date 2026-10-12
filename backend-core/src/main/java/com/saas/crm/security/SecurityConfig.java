@@ -45,7 +45,7 @@ public class SecurityConfig {
                 // Reglas de autorización
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/public/**").permitAll()
                         .anyRequest().authenticated())
 
                 // Registrar el filtro JWT antes del filtro de autenticación estándar

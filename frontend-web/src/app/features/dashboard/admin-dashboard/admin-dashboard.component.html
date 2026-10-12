@@ -214,6 +214,140 @@
 
     <!-- ── CONTENIDO PRINCIPAL — las vistas hijas se renderizan aquí ── -->
     <main id="admin-main-content" class="flex-1 overflow-y-auto bg-slate-50" role="main">
+
+      <!-- ── WIDGET DE CUOTAS Y CONSUMO (ROLE_ADMIN_EMPRESA) ── -->
+      @if (currentUser()?.rol === 'ROLE_ADMIN_EMPRESA' && consumo(); as c) {
+      <section id="tenant-quota-widget" aria-label="Consumo y cuotas del plan"
+        class="border-b border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8 shadow-sm">
+
+        <!-- Banner ámbar preventivo -->
+        @if (c.limiteUsuariosAlcanzado || c.limiteProductosAlcanzado) {
+        <div id="quota-warning-banner"
+          class="mb-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm"
+          role="alert">
+          <svg class="h-5 w-5 shrink-0 text-amber-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <div class="flex-1 text-sm">
+            <p class="font-bold text-amber-900">Atención: Límite de recursos alcanzado</p>
+            <p class="mt-0.5 text-amber-800">
+              @if (c.limiteUsuariosAlcanzado && c.limiteProductosAlcanzado) {
+              Has alcanzado el límite máximo de usuarios y productos permitidos en tu plan actual.
+              } @else if (c.limiteUsuariosAlcanzado) {
+              Has alcanzado el límite máximo de usuarios permitidos en tu plan actual.
+              } @else {
+              Has alcanzado el límite máximo de productos en catálogo permitidos en tu plan actual.
+              }
+              Para agregar más recursos sin interrupciones, considera actualizar tu plan SaaS.
+            </p>
+          </div>
+        </div>
+        }
+
+        <!-- Encabezado de plan y estado -->
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 text-brand-primary">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+            </span>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Plan Actual:</span>
+              <span class="ml-1.5 text-sm font-bold text-slate-900">{{ c.planNombre }}</span>
+            </div>
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              [ngClass]="c.estadoSuscripcion === 'ACTIVA' || c.estadoSuscripcion === 'ACTIVO' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'">
+              {{ c.estadoSuscripcion }}
+            </span>
+          </div>
+
+          @if (c.diasRestantesMembresia > 0) {
+          <span class="text-xs text-slate-500">
+            {{ c.diasRestantesMembresia }} días restantes de membresía
+            @if (c.fechaVencimientoPlan) {
+            • Vence el {{ c.fechaVencimientoPlan | date:'dd/MM/yyyy' }}
+            }
+          </span>
+          }
+        </div>
+
+        <!-- Barras de progreso de cuotas: Usuarios, Productos y Almacenes -->
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+
+          <!-- Usuarios -->
+          <div class="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+            <div class="flex items-center justify-between text-xs font-medium">
+              <span class="text-slate-600">Usuarios</span>
+              <span class="font-semibold text-slate-900">
+                {{ c.usuariosActuales }} / {{ c.usuariosLimite === -1 ? 'Ilimitado' : c.usuariosLimite }}
+              </span>
+            </div>
+            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div class="h-full rounded-full transition-all duration-300"
+                [ngClass]="c.limiteUsuariosAlcanzado ? 'bg-amber-500' : (c.usuariosLimite === -1 ? 'bg-emerald-500' : 'bg-brand-primary')"
+                [style.width.%]="c.usuariosLimite === -1 ? 100 : calcularPorcentaje(c.usuariosActuales, c.usuariosLimite)">
+              </div>
+            </div>
+            <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span>{{ c.usuariosLimite === -1 ? 'Ilimitado' : (calcularPorcentaje(c.usuariosActuales, c.usuariosLimite)
+                + '% usado') }}</span>
+              @if (c.limiteUsuariosAlcanzado) {
+              <span class="font-medium text-amber-600">Límite alcanzado</span>
+              }
+            </div>
+          </div>
+
+          <!-- Productos -->
+          <div class="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+            <div class="flex items-center justify-between text-xs font-medium">
+              <span class="text-slate-600">Productos</span>
+              <span class="font-semibold text-slate-900">
+                {{ c.productosActuales }} / {{ c.productosLimite === -1 ? 'Ilimitado' : c.productosLimite }}
+              </span>
+            </div>
+            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div class="h-full rounded-full transition-all duration-300"
+                [ngClass]="c.limiteProductosAlcanzado ? 'bg-amber-500' : (c.productosLimite === -1 ? 'bg-emerald-500' : 'bg-brand-primary')"
+                [style.width.%]="c.productosLimite === -1 ? 100 : calcularPorcentaje(c.productosActuales, c.productosLimite)">
+              </div>
+            </div>
+            <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span>{{ c.productosLimite === -1 ? 'Ilimitado' : (calcularPorcentaje(c.productosActuales,
+                c.productosLimite) + '% usado') }}</span>
+              @if (c.limiteProductosAlcanzado) {
+              <span class="font-medium text-amber-600">Límite alcanzado</span>
+              }
+            </div>
+          </div>
+
+          <!-- Almacenes -->
+          <div class="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+            <div class="flex items-center justify-between text-xs font-medium">
+              <span class="text-slate-600">Almacenes</span>
+              <span class="font-semibold text-slate-900">
+                {{ c.sucursalesActuales }} / {{ c.sucursalesLimite === -1 ? 'Ilimitado' : c.sucursalesLimite }}
+              </span>
+            </div>
+            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div class="h-full rounded-full transition-all duration-300"
+                [ngClass]="c.sucursalesLimite === -1 ? 'bg-emerald-500' : 'bg-brand-primary'"
+                [style.width.%]="c.sucursalesLimite === -1 ? 100 : calcularPorcentaje(c.sucursalesActuales, c.sucursalesLimite)">
+              </div>
+            </div>
+            <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span>{{ c.sucursalesLimite === -1 ? 'Ilimitado' : (calcularPorcentaje(c.sucursalesActuales,
+                c.sucursalesLimite) + '% usado') }}</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+      }
+
       <router-outlet></router-outlet>
     </main>
   </div>

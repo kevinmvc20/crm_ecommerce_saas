@@ -13,6 +13,12 @@ export const routes: Routes = [
             import('./features/auth/login/login.component').then(m => m.LoginComponent),
     },
     {
+        path: 'registro',
+        loadComponent: () =>
+            import('./features/onboarding/onboarding-wizard/onboarding-wizard.component')
+                .then(m => m.OnboardingWizardComponent),
+    },
+    {
         // Layout administrativo: el AdminDashboardComponent actúa como shell
         // con Sidebar + Header permanentes. Las rutas hijas se renderizan
         // dentro de su <router-outlet> sin desmontar el layout.

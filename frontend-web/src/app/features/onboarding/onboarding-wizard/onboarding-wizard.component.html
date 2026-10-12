@@ -1,0 +1,734 @@
+<!-- ════════════════════════════════════════════════════════════════════
+     Onboarding Wizard — Registro Self-Service de Empresa (Fase 3)
+     Pasos: 1-Cuenta/Empresa  2-Plan  3-Checkout  4-Éxito
+     ════════════════════════════════════════════════════════════════════ -->
+<div
+  class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col items-center py-10 px-4 relative overflow-hidden"
+  id="onboarding-page">
+
+  <!-- Decoración de fondo -->
+  <div aria-hidden="true"
+    class="absolute -top-40 -left-40 w-[520px] h-[520px] bg-blue-600 opacity-10 rounded-full blur-3xl pointer-events-none">
+  </div>
+  <div aria-hidden="true"
+    class="absolute -bottom-40 -right-40 w-[520px] h-[520px] bg-indigo-600 opacity-10 rounded-full blur-3xl pointer-events-none">
+  </div>
+
+  <!-- ── Encabezado de marca ── -->
+  <header class="text-center mb-8">
+    <div
+      class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-primary shadow-lg shadow-blue-500/30 mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-white tracking-tight">
+      CRM<span class="text-blue-400">360</span>
+    </h1>
+    <p class="mt-1 text-sm text-slate-400 font-medium">Abre tu tienda en minutos · Sin tarjeta requerida para empezar
+    </p>
+  </header>
+
+  <!-- ── Indicador de pasos (Stepper) ── -->
+  @if (pasoActual() < 4) { <nav class="flex items-center gap-0 mb-8 w-full max-w-lg" aria-label="Pasos del registro">
+    @for (step of [
+    {n: 1, label: 'Empresa'},
+    {n: 2, label: 'Plan'},
+    {n: 3, label: 'Pago'}
+    ]; track step.n) {
+    <!-- Paso -->
+    <div class="flex flex-col items-center flex-1">
+      <div class="flex items-center w-full">
+        @if (step.n > 1) {
+        <div class="h-0.5 flex-1 step-line" [ngClass]="pasoActual() >= step.n ? 'bg-brand-primary' : 'bg-slate-700'">
+        </div>
+        }
+        <div
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all duration-300"
+          [ngClass]="pasoActual() > step.n
+            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+            : pasoActual() === step.n
+            ? 'bg-brand-primary text-white shadow-md shadow-blue-500/40 ring-4 ring-blue-500/20'
+            : 'bg-slate-700 text-slate-400'">
+          @if (pasoActual() > step.n) {
+          <!-- Check mark -->
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          } @else {
+          {{ step.n }}
+          }
+        </div>
+        @if (step.n < 3) { <div class="h-0.5 flex-1 step-line"
+          [ngClass]="pasoActual() > step.n ? 'bg-brand-primary' : 'bg-slate-700'">
+      </div>
+      }
+    </div>
+    <span class="mt-1.5 text-[11px] font-medium"
+      [ngClass]="pasoActual() === step.n ? 'text-blue-400' : 'text-slate-500'">
+      {{ step.label }}
+    </span>
+</div>
+}
+</nav>
+}
+
+<!-- ══════════════════════════════════════════════
+       Tarjeta contenedora del wizard
+       ══════════════════════════════════════════════ -->
+<div
+  class="relative w-full max-w-2xl bg-slate-800/70 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden step-enter">
+
+  <!-- Franja superior de acento -->
+  <div class="h-1 w-full bg-gradient-to-r from-brand-primary via-blue-400 to-indigo-500"></div>
+
+  <!-- ════════════════════════════════════════════
+         PASO 1 — Datos de Empresa y Cuenta Admin
+         ════════════════════════════════════════════ -->
+  @if (pasoActual() === 1) {
+  <section class="p-8" aria-labelledby="paso1-titulo">
+    <h2 id="paso1-titulo" class="text-xl font-bold text-white mb-1">Crea tu empresa en la plataforma</h2>
+    <p class="text-sm text-slate-400 mb-6">Esta información configura tu espacio de trabajo y cuenta de administrador.
+    </p>
+
+    <form [formGroup]="paso1Form" (ngSubmit)="avanzarPaso1()" novalidate id="paso1-form" class="space-y-5">
+
+      <!-- Nombre Comercial -->
+      <div>
+        <label for="ob-nombreComercial" class="block text-sm font-semibold text-slate-300 mb-1.5">
+          Nombre comercial de la empresa <span class="text-rose-400">*</span>
+        </label>
+        <input id="ob-nombreComercial" type="text" formControlName="nombreComercial"
+          placeholder="Ej. Ferretería El Maestro"
+          class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg
+                   placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+          [class.ring-2]="p1['nombreComercial'].invalid && p1['nombreComercial'].touched"
+          [class.ring-rose-500]="p1['nombreComercial'].invalid && p1['nombreComercial'].touched"
+          [class.border-rose-500]="p1['nombreComercial'].invalid && p1['nombreComercial'].touched" />
+        @if (p1['nombreComercial'].touched && p1['nombreComercial'].hasError('required')) {
+        <p class="mt-1 text-xs text-rose-400" role="alert">El nombre comercial es obligatorio.</p>
+        }
+        @if (p1['nombreComercial'].touched && p1['nombreComercial'].hasError('minlength')) {
+        <p class="mt-1 text-xs text-rose-400" role="alert">Debe tener al menos 2 caracteres.</p>
+        }
+      </div>
+
+      <!-- Subdominio -->
+      <div>
+        <label for="ob-subdominio" class="block text-sm font-semibold text-slate-300 mb-1.5">
+          Subdominio de tu tienda <span class="text-rose-400">*</span>
+        </label>
+        <input id="ob-subdominio" type="text" formControlName="subdominio"
+          placeholder="mitienda (solo minúsculas, números y guiones)"
+          class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg
+                   placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+          [class.ring-2]="p1['subdominio'].invalid && p1['subdominio'].touched"
+          [class.ring-rose-500]="p1['subdominio'].invalid && p1['subdominio'].touched"
+          [class.border-rose-500]="p1['subdominio'].invalid && p1['subdominio'].touched" />
+        <!-- Preview dinámico -->
+        <p class="mt-1.5 text-xs text-slate-400">
+          Vista previa:
+          <span class="font-mono font-semibold text-blue-400">
+            {{ p1['subdominio'].value || 'mitienda' }}.tudominio.com
+          </span>
+        </p>
+        @if (p1['subdominio'].touched && p1['subdominio'].hasError('required')) {
+        <p class="mt-0.5 text-xs text-rose-400" role="alert">El subdominio es obligatorio.</p>
+        }
+        @if (p1['subdominio'].touched && p1['subdominio'].hasError('subdominioInvalido')) {
+        <p class="mt-0.5 text-xs text-rose-400" role="alert">Solo se permiten minúsculas, números y guiones.</p>
+        }
+        @if (p1['subdominio'].touched && (p1['subdominio'].hasError('minlength') ||
+        p1['subdominio'].hasError('maxlength'))) {
+        <p class="mt-0.5 text-xs text-rose-400" role="alert">Entre 3 y 30 caracteres.</p>
+        }
+      </div>
+
+      <!-- Separador visual -->
+      <div class="border-t border-slate-700 pt-4">
+        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Cuenta de Administrador</p>
+
+        <!-- Nombre Completo -->
+        <div class="mb-5">
+          <label for="ob-adminNombre" class="block text-sm font-semibold text-slate-300 mb-1.5">
+            Tu nombre completo <span class="text-rose-400">*</span>
+          </label>
+          <input id="ob-adminNombre" type="text" formControlName="adminNombreCompleto" placeholder="Nombre y Apellidos"
+            class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg
+                     placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+            [class.ring-2]="p1['adminNombreCompleto'].invalid && p1['adminNombreCompleto'].touched"
+            [class.ring-rose-500]="p1['adminNombreCompleto'].invalid && p1['adminNombreCompleto'].touched"
+            [class.border-rose-500]="p1['adminNombreCompleto'].invalid && p1['adminNombreCompleto'].touched" />
+          @if (p1['adminNombreCompleto'].touched && p1['adminNombreCompleto'].hasError('required')) {
+          <p class="mt-1 text-xs text-rose-400" role="alert">Tu nombre es obligatorio.</p>
+          }
+        </div>
+
+        <!-- Email Admin -->
+        <div class="mb-5">
+          <label for="ob-adminEmail" class="block text-sm font-semibold text-slate-300 mb-1.5">
+            Correo electrónico <span class="text-rose-400">*</span>
+          </label>
+          <input id="ob-adminEmail" type="email" formControlName="adminEmail" placeholder="admin@tuempresa.com"
+            autocomplete="email"
+            class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg
+                     placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+            [class.ring-2]="p1['adminEmail'].invalid && p1['adminEmail'].touched"
+            [class.ring-rose-500]="p1['adminEmail'].invalid && p1['adminEmail'].touched"
+            [class.border-rose-500]="p1['adminEmail'].invalid && p1['adminEmail'].touched" />
+          @if (p1['adminEmail'].touched && p1['adminEmail'].hasError('required')) {
+          <p class="mt-1 text-xs text-rose-400" role="alert">El correo es obligatorio.</p>
+          }
+          @if (p1['adminEmail'].touched && p1['adminEmail'].hasError('email')) {
+          <p class="mt-1 text-xs text-rose-400" role="alert">Ingresa un correo válido.</p>
+          }
+        </div>
+
+        <!-- Password Admin -->
+        <div>
+          <label for="ob-adminPassword" class="block text-sm font-semibold text-slate-300 mb-1.5">
+            Contraseña <span class="text-rose-400">*</span>
+          </label>
+          <input id="ob-adminPassword" type="password" formControlName="adminPassword" placeholder="Mínimo 8 caracteres"
+            autocomplete="new-password"
+            class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg
+                     placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+            [class.ring-2]="p1['adminPassword'].invalid && p1['adminPassword'].touched"
+            [class.ring-rose-500]="p1['adminPassword'].invalid && p1['adminPassword'].touched"
+            [class.border-rose-500]="p1['adminPassword'].invalid && p1['adminPassword'].touched" />
+          @if (p1['adminPassword'].touched && p1['adminPassword'].hasError('required')) {
+          <p class="mt-1 text-xs text-rose-400" role="alert">La contraseña es obligatoria.</p>
+          }
+          @if (p1['adminPassword'].touched && p1['adminPassword'].hasError('minlength')) {
+          <p class="mt-1 text-xs text-rose-400" role="alert">Mínimo 8 caracteres.</p>
+          }
+        </div>
+      </div>
+
+      <!-- Botón avanzar -->
+      <button type="submit" id="paso1-siguiente-btn" class="w-full flex items-center justify-center gap-2 h-11 px-4 mt-2
+                 bg-brand-primary hover:opacity-90 active:scale-[0.99]
+                 text-white text-sm font-semibold rounded-lg
+                 shadow-lg shadow-blue-500/25
+                 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-slate-800
+                 transition-all duration-150">
+        <span>Continuar: Seleccionar Plan</span>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+        </svg>
+      </button>
+
+      <!-- Enlace a login -->
+      <p class="text-center text-sm text-slate-500 pt-1">
+        ¿Ya tienes una cuenta?
+        <a routerLink="/login" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
+          Inicia sesión aquí
+        </a>
+      </p>
+    </form>
+  </section>
+  }
+
+  <!-- ════════════════════════════════════════════
+         PASO 2 — Selección de Plan SaaS
+         ════════════════════════════════════════════ -->
+  @if (pasoActual() === 2) {
+  <section class="p-8" aria-labelledby="paso2-titulo">
+    <div class="flex items-center gap-3 mb-1">
+      <button type="button" (click)="retroceder()"
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+        aria-label="Volver al paso anterior">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+      </button>
+      <h2 id="paso2-titulo" class="text-xl font-bold text-white">Elige el plan para tu negocio</h2>
+    </div>
+    <p class="text-sm text-slate-400 mb-6 ml-11">Selecciona el plan que mejor se adapte al tamaño de tu operación.
+    </p>
+
+    @if (planesLoading()) {
+    <!-- Skeleton de carga -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      @for (i of [1,2,3]; track i) {
+      <div class="skeleton h-52 rounded-xl"></div>
+      }
+    </div>
+    } @else if (planes().length === 0) {
+    <div class="text-center py-12 text-slate-400">
+      <p>No se pudieron cargar los planes. Inténtalo más tarde.</p>
+    </div>
+    } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="planes-lista">
+      @for (plan of planes(); track plan.id) {
+      <div
+        class="plan-card group relative bg-slate-900/60 border border-slate-700 hover:border-blue-500/60 rounded-xl p-5 cursor-pointer transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/10"
+        (click)="seleccionarPlan(plan)" [id]="'plan-card-' + plan.id" role="button"
+        [attr.aria-label]="'Seleccionar plan ' + plan.nombre" tabindex="0" (keydown.enter)="seleccionarPlan(plan)"
+        (keydown.space)="seleccionarPlan(plan)">
+
+        <!-- Badge popular (si es el segundo plan o el más barato distinto de 0) -->
+        @if (plan.precioMensual > 0 && plan === planes()[1]) {
+        <span
+          class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full shadow">
+          Más popular
+        </span>
+        }
+
+        <h3 class="text-base font-bold text-white mb-0.5">{{ plan.nombre }}</h3>
+
+        <!-- Precio -->
+        <div class="flex items-end gap-1 mb-4">
+          @if (plan.precioMensual === 0) {
+          <span class="text-3xl font-black text-emerald-400">Gratis</span>
+          } @else {
+          <span class="text-3xl font-black text-white">{{ formatearPrecio(plan.precioMensual) }}</span>
+          <span class="text-sm text-slate-400 mb-1">/mes</span>
+          }
+        </div>
+
+        <!-- Características -->
+        <ul class="space-y-2 text-sm text-slate-400 mb-5">
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            <span>
+              <strong class="text-white">{{ formatearLimite(plan.limiteUsuarios) }}</strong>
+              {{ plan.limiteUsuarios === -1 ? 'usuarios' : 'usuario(s)' }}
+            </span>
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            <span>
+              <strong class="text-white">{{ formatearLimite(plan.limiteProductos) }}</strong>
+              {{ plan.limiteProductos === -1 ? 'productos (catálogo ilimitado)' : 'productos en catálogo' }}
+            </span>
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            <span class="text-blue-300">
+              {{ plan.limiteProductos === -1 ? 'Multi-sucursal activa' : 'Gestión de sucursal incluida' }}
+            </span>
+          </li>
+        </ul>
+
+        <!-- Botón seleccionar -->
+        <button type="button"
+          class="w-full h-9 rounded-lg text-sm font-semibold transition-all duration-200
+                   bg-brand-primary/10 text-blue-400 border border-blue-500/30
+                   group-hover:bg-brand-primary group-hover:text-white group-hover:border-brand-primary group-hover:shadow-md group-hover:shadow-blue-500/30">
+          Seleccionar este plan →
+        </button>
+      </div>
+      }
+    </div>
+    }
+  </section>
+  }
+
+  <!-- ════════════════════════════════════════════
+         PASO 3 — Checkout Simulado
+         ════════════════════════════════════════════ -->
+  @if (pasoActual() === 3) {
+  <section class="p-8" aria-labelledby="paso3-titulo">
+    <div class="flex items-center gap-3 mb-1">
+      <button type="button" (click)="retroceder()"
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+        aria-label="Volver al paso anterior">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+      </button>
+      <h2 id="paso3-titulo" class="text-xl font-bold text-white">Información de pago</h2>
+    </div>
+
+    <!-- Resumen del plan seleccionado -->
+    @if (planSeleccionado()) {
+    <div class="ml-11 mb-6 flex items-center gap-3 bg-blue-950/60 border border-blue-800/50 rounded-lg px-4 py-3">
+      <svg class="w-5 h-5 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="1.8" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <p class="text-sm font-semibold text-white">Plan {{ planSeleccionado()!.nombre }}</p>
+        <p class="text-xs text-slate-400">
+          @if (planSeleccionado()!.precioMensual === 0) {
+          Sin costo
+          } @else {
+          {{ formatearPrecio(planSeleccionado()!.precioMensual) }} / mes
+          }
+        </p>
+      </div>
+    </div>
+    }
+
+    <!-- Selector de método de pago (tabs) -->
+    <div class="flex gap-2 mb-6" role="tablist" aria-label="Métodos de pago">
+      <button type="button" id="tab-tarjeta" role="tab" [attr.aria-selected]="metodoPago() === 'TARJETA'"
+        (click)="cambiarMetodoPago('TARJETA')"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+        [ngClass]="metodoPago() === 'TARJETA'
+            ? 'bg-brand-primary text-white shadow-md shadow-blue-500/25'
+            : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+        Tarjeta de Crédito/Débito
+      </button>
+      <button type="button" id="tab-qr" role="tab" [attr.aria-selected]="metodoPago() === 'QR'"
+        (click)="cambiarMetodoPago('QR')"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+        [ngClass]="metodoPago() === 'QR'
+            ? 'bg-brand-primary text-white shadow-md shadow-blue-500/25'
+            : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+        </svg>
+        Código QR
+      </button>
+    </div>
+
+    <!-- ── Panel Tarjeta ── -->
+    @if (metodoPago() === 'TARJETA') {
+    <form [formGroup]="checkoutForm" novalidate id="checkout-form" class="space-y-4">
+
+      <!-- Número de tarjeta -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="chk-numero" class="text-sm font-semibold text-slate-300">
+            Número de tarjeta <span class="text-rose-400">*</span>
+          </label>
+          <!-- Tooltip ayuda -->
+          <span class="group relative">
+            <button type="button"
+              class="text-xs text-slate-500 hover:text-blue-400 transition-colors flex items-center gap-1"
+              aria-describedby="tooltip-tarjeta-prueba">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+              </svg>
+              ¿Tarjeta de prueba?
+            </button>
+            <span id="tooltip-tarjeta-prueba" role="tooltip"
+              class="absolute right-0 top-6 w-56 bg-slate-900 text-xs text-slate-300 px-3 py-2 rounded-lg shadow-xl border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
+              <strong class="text-blue-400">Tarjeta de prueba:</strong><br>
+              4242 4242 4242 4242<br>
+              Cualquier fecha y CVV
+            </span>
+          </span>
+        </div>
+        <input id="chk-numero" type="text" formControlName="numeroTarjeta" placeholder="4242424242424242" maxlength="16"
+          autocomplete="cc-number"
+          class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg font-mono
+                   placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+          [class.ring-2]="chk['numeroTarjeta'].invalid && chk['numeroTarjeta'].touched"
+          [class.ring-rose-500]="chk['numeroTarjeta'].invalid && chk['numeroTarjeta'].touched"
+          [class.border-rose-500]="chk['numeroTarjeta'].invalid && chk['numeroTarjeta'].touched" />
+        @if (chk['numeroTarjeta'].touched && chk['numeroTarjeta'].invalid) {
+        <p class="mt-1 text-xs text-rose-400" role="alert">Ingresa los 16 dígitos de tu tarjeta.</p>
+        }
+      </div>
+
+      <!-- Titular -->
+      <div>
+        <label for="chk-titular" class="block text-sm font-semibold text-slate-300 mb-1.5">
+          Nombre del titular <span class="text-rose-400">*</span>
+        </label>
+        <input id="chk-titular" type="text" formControlName="titular" placeholder="Como aparece en la tarjeta"
+          autocomplete="cc-name"
+          class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg
+                   placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+          [class.ring-2]="chk['titular'].invalid && chk['titular'].touched"
+          [class.ring-rose-500]="chk['titular'].invalid && chk['titular'].touched"
+          [class.border-rose-500]="chk['titular'].invalid && chk['titular'].touched" />
+        @if (chk['titular'].touched && chk['titular'].invalid) {
+        <p class="mt-1 text-xs text-rose-400" role="alert">El nombre del titular es obligatorio.</p>
+        }
+      </div>
+
+      <!-- Expiración y CVV en fila -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="chk-expiracion" class="block text-sm font-semibold text-slate-300 mb-1.5">
+            Expiración <span class="text-rose-400">*</span>
+          </label>
+          <input id="chk-expiracion" type="text" formControlName="expiracion" placeholder="MM/YY" maxlength="5"
+            autocomplete="cc-exp"
+            class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg font-mono
+                     placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+            [class.ring-2]="chk['expiracion'].invalid && chk['expiracion'].touched"
+            [class.ring-rose-500]="chk['expiracion'].invalid && chk['expiracion'].touched"
+            [class.border-rose-500]="chk['expiracion'].invalid && chk['expiracion'].touched" />
+          @if (chk['expiracion'].touched && chk['expiracion'].invalid) {
+          <p class="mt-1 text-xs text-rose-400" role="alert">Formato MM/YY requerido.</p>
+          }
+        </div>
+        <div>
+          <label for="chk-cvv" class="block text-sm font-semibold text-slate-300 mb-1.5">
+            CVV <span class="text-rose-400">*</span>
+          </label>
+          <input id="chk-cvv" type="password" formControlName="cvv" placeholder="123" maxlength="4"
+            autocomplete="cc-csc"
+            class="w-full px-4 py-2.5 text-sm text-white bg-slate-900/60 border border-slate-600 rounded-lg font-mono
+                     placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
+            [class.ring-2]="chk['cvv'].invalid && chk['cvv'].touched"
+            [class.ring-rose-500]="chk['cvv'].invalid && chk['cvv'].touched"
+            [class.border-rose-500]="chk['cvv'].invalid && chk['cvv'].touched" />
+          @if (chk['cvv'].touched && chk['cvv'].invalid) {
+          <p class="mt-1 text-xs text-rose-400" role="alert">3 o 4 dígitos requeridos.</p>
+          }
+        </div>
+      </div>
+
+      <!-- Aviso sandbox -->
+      <div class="flex items-start gap-2 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2.5">
+        <svg class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+        <p class="text-xs text-amber-300">
+          <strong>Pasarela simulada:</strong> usa la tarjeta de prueba 4242 4242 4242 4242 con cualquier fecha
+          futura y CVV para completar el registro.
+        </p>
+      </div>
+    </form>
+    }
+
+    <!-- ── Panel QR ── -->
+    @if (metodoPago() === 'QR') {
+    <div class="flex flex-col items-center gap-4 py-4" id="qr-panel">
+      <p class="text-sm text-slate-400 text-center max-w-sm">
+        Escanea el código QR con tu app bancaria o billetera digital para aprobar el pago.
+      </p>
+
+      <!-- Monto a pagar -->
+      @if (planSeleccionado()) {
+      <div class="text-center">
+        <p class="text-xs text-slate-500 mb-0.5">Monto a pagar</p>
+        <p class="text-3xl font-black text-white">
+          @if (planSeleccionado()!.precioMensual === 0) {
+          S/ 0.00
+          } @else {
+          {{ formatearPrecio(planSeleccionado()!.precioMensual) }}
+          }
+        </p>
+        <p class="text-xs text-slate-500">por mes · Plan {{ planSeleccionado()!.nombre }}</p>
+      </div>
+      }
+
+      <!-- QR visual simulado -->
+      <div class="relative p-4 bg-white rounded-2xl shadow-xl shadow-black/40">
+        <div class="qr-grid">
+          @for (cell of [
+          1,1,1,1,1,1,1,0,1,0,
+          1,0,0,0,0,0,1,0,0,1,
+          1,0,1,1,1,0,1,0,1,0,
+          1,0,1,1,1,0,1,1,0,1,
+          1,0,1,1,1,0,1,0,1,0,
+          1,0,0,0,0,0,1,1,0,1,
+          1,1,1,1,1,1,1,0,1,0,
+          0,0,0,0,1,0,0,0,1,1,
+          1,1,0,1,0,1,1,0,0,1,
+          0,1,0,0,1,1,0,1,1,0
+          ]; track $index) {
+          <div class="qr-cell" [ngClass]="cell === 1 ? 'dark' : ''"></div>
+          }
+        </div>
+        <!-- Logo central superpuesto -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div class="w-8 h-8 rounded-md bg-brand-primary flex items-center justify-center shadow">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"
+              aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-500 text-center">El QR expira en <strong class="text-white">10:00</strong>
+        minutos</p>
+
+      <!-- Botón simular escaneo -->
+      <button type="button" id="simular-qr-btn" (click)="simularEscaneoQR()" [disabled]="isSubmitting()" class="flex items-center justify-center gap-2 h-11 px-8
+                 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99]
+                 text-white text-sm font-semibold rounded-lg
+                 shadow-lg shadow-emerald-500/25
+                 disabled:opacity-60 disabled:cursor-not-allowed
+                 transition-all duration-150">
+        @if (isSubmitting()) {
+        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <span>Procesando...</span>
+        } @else {
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Simular escaneo y aprobación</span>
+        }
+      </button>
+    </div>
+    }
+
+    <!-- ── Banner de error ── -->
+    @if (errorMessage()) {
+    <div role="alert" aria-live="assertive"
+      class="flex items-start gap-3 mt-5 px-4 py-3 bg-rose-900/30 border border-rose-700/50 rounded-lg">
+      <svg class="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+      </svg>
+      <p class="text-sm text-rose-300">{{ errorMessage() }}</p>
+      <button type="button" (click)="errorMessage.set(null)"
+        class="ml-auto text-rose-400 hover:text-rose-200 transition-colors" aria-label="Cerrar error">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    }
+
+    <!-- ── Botón confirmar (solo tarjeta) ── -->
+    @if (metodoPago() === 'TARJETA') {
+    <button type="button" id="confirmar-activar-btn" (click)="confirmarYActivar()" [disabled]="isSubmitting()" class="w-full flex items-center justify-center gap-2 h-11 px-4 mt-6
+               bg-brand-primary hover:opacity-90 active:scale-[0.99]
+               text-white text-sm font-semibold rounded-lg
+               shadow-lg shadow-blue-500/25
+               disabled:opacity-60 disabled:cursor-not-allowed
+               focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-slate-800
+               transition-all duration-150">
+      @if (isSubmitting()) {
+      <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <span>Procesando pago...</span>
+      } @else {
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+      </svg>
+      <span>Confirmar y Activar Tienda</span>
+      }
+    </button>
+    }
+  </section>
+  }
+
+  <!-- ════════════════════════════════════════════
+         PASO 4 — ¡Éxito! Confirmación
+         ════════════════════════════════════════════ -->
+  @if (pasoActual() === 4 && respuestaExito()) {
+  <section class="p-8 text-center" aria-labelledby="exito-titulo">
+
+    <!-- Icono de éxito animado -->
+    <div class="flex justify-center mb-6">
+      <div
+        class="success-icon flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/20 ring-8 ring-emerald-500/10">
+        <svg class="h-10 w-10 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+          aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      </div>
+    </div>
+
+    <h2 id="exito-titulo" class="text-2xl font-bold text-white mb-2">
+      ¡Tu tienda está lista! 🎉
+    </h2>
+    <p class="text-slate-400 text-sm mb-8 max-w-sm mx-auto">
+      {{ respuestaExito()!.mensaje || 'Tu empresa ha sido registrada y activada exitosamente en la plataforma.' }}
+    </p>
+
+    <!-- Tarjeta de resumen -->
+    <div class="bg-slate-900/60 border border-slate-700 rounded-xl p-5 text-left space-y-3 mb-6 max-w-md mx-auto">
+
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-slate-500 font-medium uppercase tracking-wider">Empresa</span>
+        <span class="text-sm font-semibold text-white">{{ respuestaExito()!.nombreComercial }}</span>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-slate-500 font-medium uppercase tracking-wider">Subdominio</span>
+        <span class="text-sm font-mono font-semibold text-blue-400">
+          {{ respuestaExito()!.subdominio }}.tudominio.com
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-slate-500 font-medium uppercase tracking-wider">Plan activo</span>
+        <span
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-semibold">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          {{ respuestaExito()!.planNombre }}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-slate-500 font-medium uppercase tracking-wider">Vigente hasta</span>
+        <span class="text-sm text-white">{{ respuestaExito()!.fechaVencimientoPlan | date:'dd/MM/yyyy' }}</span>
+      </div>
+
+      <div class="border-t border-slate-700 pt-3 flex items-center justify-between">
+        <span class="text-xs text-slate-500 font-medium uppercase tracking-wider">ID de Transacción</span>
+        <span class="text-xs font-mono text-slate-300 truncate max-w-[180px]">
+          {{ respuestaExito()!.transaccionId }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Botón ir a login -->
+    <button type="button" id="ir-login-btn" (click)="irAlLogin()" class="inline-flex items-center justify-center gap-2 h-11 px-8
+               bg-brand-primary hover:opacity-90 active:scale-[0.99]
+               text-white text-sm font-semibold rounded-lg
+               shadow-lg shadow-blue-500/25
+               focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-slate-800
+               transition-all duration-150">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+      </svg>
+      Iniciar Sesión en tu Panel
+    </button>
+
+    <p class="text-xs text-slate-500 mt-4">
+      Usa el correo <strong class="text-slate-300">{{ respuestaExito()!.adminEmail }}</strong> para ingresar.
+    </p>
+  </section>
+  }
+
+</div>
+<!-- ══ fin tarjeta wizard ══ -->
+
+<!-- Pie de página -->
+<footer class="mt-8 text-center">
+  <p class="text-xs text-slate-600">
+    &copy; 2026 CRM360 · Plataforma SaaS B2B Multi-Tenant ·
+    <a href="#" class="text-slate-500 hover:text-slate-300 transition-colors">Términos</a> ·
+    <a href="#" class="text-slate-500 hover:text-slate-300 transition-colors">Privacidad</a>
+  </p>
+</footer>
+
+</div>

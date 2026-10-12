@@ -4,6 +4,7 @@ import com.saas.crm.domain.entity.Sucursal;
 import com.saas.crm.domain.entity.Tenant;
 import com.saas.crm.dto.inventario.SucursalCreateRequest;
 import com.saas.crm.dto.inventario.SucursalResponse;
+import com.saas.crm.exception.BadRequestException;
 import com.saas.crm.repository.SucursalRepository;
 import com.saas.crm.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,21 @@ public class SucursalService {
     public SucursalResponse registrarSucursal(UUID tenantId, SucursalCreateRequest request) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant no encontrado."));
+
+        // ── Candado SaaS: límite de sucursales según plan ──────────────────────
+        // Solo Business tiene multi-sucursal (-1 = ilimitado). Básico y Pro: máx 1.
+        boolean esBusiness = tenant.getPlanSaaS() != null
+                && "Business".equalsIgnoreCase(tenant.getPlanSaaS().getNombre());
+
+        if (!esBusiness) {
+            long sucursalesActivas = sucursalRepository.countByTenantIdAndActivoTrue(tenantId);
+            if (sucursalesActivas >= 1) {
+                throw new BadRequestException(
+                        "Tu plan actual solo permite 1 sucursal/punto de venta. " +
+                        "Actualiza a Plan Business para habilitar multi-almacén.");
+            }
+        }
+        // ──────────────────────────────────────────────────────────────────────
 
         Sucursal sucursal = new Sucursal();
         sucursal.setTenant(tenant);

@@ -1,0 +1,84 @@
+/* ══════════════════════════════════════════════════════════
+   Onboarding Wizard — Custom styles for elements that can't
+   be achieved purely with Tailwind utility classes.
+   ══════════════════════════════════════════════════════════ */
+
+/* QR code visual simulation */
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  gap: 2px;
+  width: 160px;
+  height: 160px;
+  padding: 8px;
+  background: white;
+  border-radius: 8px;
+}
+
+.qr-cell {
+  border-radius: 1px;
+  background: transparent;
+}
+
+.qr-cell.dark {
+  background: #0f172a;
+}
+
+/* Plan card hover lift effect */
+.plan-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plan-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Stepper line animation */
+.step-line {
+  transition: background-color 0.4s ease;
+}
+
+/* Password strength bar */
+.strength-bar {
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Slide-in animation for each step */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.step-enter {
+  animation: slideInRight 0.3s ease forwards;
+}
+
+/* Success checkmark animation */
+@keyframes checkBounce {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.success-icon {
+  animation: checkBounce 0.5s ease 0.2s both;
+}
+
+/* Shimmer loading for plan cards */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}

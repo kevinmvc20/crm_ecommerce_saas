@@ -34,4 +34,22 @@ public interface SucursalRepository extends JpaRepository<Sucursal, Integer> {
      * @return opcional con la sucursal si existe y pertenece al tenant
      */
     Optional<Sucursal> findByIdAndTenantId(Integer id, UUID tenantId);
+
+    /**
+     * Cuenta las sucursales <em>activas</em> del tenant.
+     * Utilizado para validar el límite de sucursales según el plan SaaS.
+     *
+     * @param tenantId UUID del tenant
+     * @return número de sucursales activas
+     */
+    long countByTenantIdAndActivoTrue(UUID tenantId);
+
+    /**
+     * Cuenta todas las sucursales del tenant (activas e inactivas).
+     * Utilizado para métricas de consumo del tenant.
+     *
+     * @param tenantId UUID del tenant
+     * @return número total de sucursales
+     */
+    long countByTenantId(UUID tenantId);
 }

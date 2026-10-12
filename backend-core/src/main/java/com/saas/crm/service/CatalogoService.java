@@ -2,6 +2,7 @@ package com.saas.crm.service;
 
 import com.saas.crm.domain.entity.*;
 import com.saas.crm.dto.inventario.*;
+import com.saas.crm.exception.BadRequestException;
 import com.saas.crm.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -79,13 +80,16 @@ public class CatalogoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant no encontrado."));
 
         // 2. Candado SaaS — validar cuota de productos
+        //    limiteProductos = -1 significa ILIMITADO (Plan Business): no bloquear.
         if (tenant.getPlanSaaS() != null) {
-            long activos = productoRepository.countByTenantIdAndActivoTrue(tenantId);
-            if (activos >= tenant.getPlanSaaS().getLimiteProductos()) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Límite de productos alcanzado en su plan. Actual: " + activos
-                        + " / Límite: " + tenant.getPlanSaaS().getLimiteProductos() + ".");
+            Integer limiteProductos = tenant.getPlanSaaS().getLimiteProductos();
+            if (limiteProductos != null && limiteProductos > 0) {
+                long productosActuales = productoRepository.countByTenantIdAndActivoTrue(tenantId);
+                if (productosActuales >= limiteProductos) {
+                    throw new BadRequestException(
+                            "Has alcanzado el límite máximo de productos de tu plan ("
+                            + limiteProductos + "). Actualiza tu suscripción para ampliar tu catálogo.");
+                }
             }
         }
 

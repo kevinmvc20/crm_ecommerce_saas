@@ -1,7 +1,9 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConsumoService } from '../../../core/services/consumo.service';
+import { TenantConsumo } from '../../../core/models/consumo.models';
 
 /** Metadata de cada enlace de navegación lateral */
 interface NavItem {
@@ -34,12 +36,13 @@ const NAV_TENANT: NavItem[] = [
   imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './admin-dashboard.component.html',
 })
-export class AdminDashboardComponent {
+export class AdminDashboardComponent implements OnInit {
 
   // ──────────────────────────────────────────────────────
   // Dependencias
   // ──────────────────────────────────────────────────────
   protected readonly authService = inject(AuthService);
+  protected readonly consumoService = inject(ConsumoService);
 
   // ──────────────────────────────────────────────────────
   // Estado reactivo
@@ -53,6 +56,9 @@ export class AdminDashboardComponent {
 
   /** TenantId del usuario activo (null para SuperAdmin) */
   protected readonly currentTenant = this.authService.currentTenant;
+
+  /** Estado de consumo y cuotas para ROLE_ADMIN_EMPRESA */
+  protected readonly consumo = signal<TenantConsumo | null>(null);
 
   // ──────────────────────────────────────────────────────
   // Computed signals derivados del rol
@@ -98,9 +104,25 @@ export class AdminDashboardComponent {
     return labels[rol] ?? rol;
   });
 
+  ngOnInit(): void {
+    if (this.currentUser()?.rol === 'ROLE_ADMIN_EMPRESA') {
+      this.consumoService.getConsumoActual().subscribe({
+        next: (data) => this.consumo.set(data),
+        error: (err) => console.error('Error al obtener consumo del tenant:', err),
+      });
+    }
+  }
+
   // ──────────────────────────────────────────────────────
   // Acciones
   // ──────────────────────────────────────────────────────
+
+  /** Calcula porcentaje de uso para las barras de progreso (0 a 100) */
+  protected calcularPorcentaje(actual: number, limite: number): number {
+    if (limite === -1) return 100;
+    if (!limite || limite <= 0) return 0;
+    return Math.min(100, Math.round((actual / limite) * 100));
+  }
 
   /** Alterna el sidebar en móvil */
   protected toggleSidebar(): void {
