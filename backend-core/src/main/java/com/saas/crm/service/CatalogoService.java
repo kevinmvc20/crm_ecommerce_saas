@@ -287,6 +287,60 @@ public class CatalogoService {
         return toVarianteResponse(varianteSaved);
     }
 
+    // ─── Actualizar Variante ──────────────────────────────────────────────────
+
+    /**
+     * Actualiza los datos comerciales de una variante de producto existente.
+     * Solo modifica nombre de variante, precio y estado activo; el SKU es estrictamente inmutable.
+     *
+     * @param tenantId   UUID del tenant autenticado
+     * @param varianteId UUID de la variante a actualizar
+     * @param request    payload con los nuevos datos comerciales
+     * @return {@link VarianteResponse} con la variante actualizada
+     * @throws ResponseStatusException 404 si la variante no existe o no pertenece al tenant
+     */
+    @Transactional
+    public VarianteResponse actualizarVariante(UUID tenantId, UUID varianteId, VarianteUpdateRequest request) {
+        return actualizarVariante(tenantId, null, varianteId, request);
+    }
+
+    /**
+     * Actualiza los datos comerciales de una variante de producto existente, verificando
+     * opcionalmente la coherencia con el producto padre indicado.
+     *
+     * @param tenantId   UUID del tenant autenticado
+     * @param productoId UUID del producto padre (opcional, validado si se proporciona)
+     * @param varianteId UUID de la variante a actualizar
+     * @param request    payload con los nuevos datos comerciales
+     * @return {@link VarianteResponse} con la variante actualizada
+     * @throws ResponseStatusException 404 si la variante no existe, no pertenece al tenant o no corresponde al producto
+     */
+    @Transactional
+    public VarianteResponse actualizarVariante(UUID tenantId, UUID productoId, UUID varianteId, VarianteUpdateRequest request) {
+
+        // 1. Verificar que la variante existe y pertenece al tenant (aislamiento multi-tenant estricto)
+        VarianteProducto variante = varianteProductoRepository.findById(varianteId)
+                .filter(v -> v.getTenant().getId().equals(tenantId))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Variante no encontrada o no pertenece al tenant."));
+
+        // 2. Si se especificó productoId, validar coherencia jerárquica
+        if (productoId != null && !variante.getProducto().getId().equals(productoId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "La variante no pertenece al producto especificado.");
+        }
+
+        // 3. Actualizar campos comerciales (inmutabilidad estricta del SKU)
+        variante.setNombreVariante(request.nombreVariante());
+        variante.setPrecio(request.precio());
+        variante.setActivo(request.activo());
+
+        VarianteProducto updated = varianteProductoRepository.save(variante);
+        return toVarianteResponse(updated);
+    }
+
     // ─── Ajustar Stock ────────────────────────────────────────────────────────
 
     /**

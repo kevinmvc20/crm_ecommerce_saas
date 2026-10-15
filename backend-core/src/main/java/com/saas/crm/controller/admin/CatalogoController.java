@@ -144,6 +144,33 @@ public class CatalogoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    // ─── PUT /variantes/{varianteId} ──────────────────────────────────────────
+
+    /**
+     * Actualiza los datos comerciales de una variante de producto existente.
+     * Solo modifica nombre comercial, precio y estado activo; el SKU es inmutable.
+     *
+     * <p>PUT {@code /api/v1/admin/productos/variantes/{varianteId}}</p>
+     * <p>PUT {@code /api/v1/admin/productos/{productoId}/variantes/{varianteId}}</p>
+     *
+     * @param usuarioAuth usuario autenticado
+     * @param productoId  UUID opcional del producto padre si se invoca la ruta jerárquica
+     * @param varianteId  UUID de la variante a actualizar
+     * @param request     payload con los nuevos datos comerciales
+     * @return HTTP 200 con la {@link VarianteResponse} actualizada
+     */
+    @PutMapping({"/variantes/{varianteId}", "/{productoId}/variantes/{varianteId}"})
+    public ResponseEntity<VarianteResponse> actualizarVariante(
+            @AuthenticationPrincipal Usuario usuarioAuth,
+            @PathVariable(required = false) UUID productoId,
+            @PathVariable UUID varianteId,
+            @Valid @RequestBody VarianteUpdateRequest request) {
+
+        UUID tenantId = usuarioAuth.getTenant().getId();
+        VarianteResponse updated = catalogoService.actualizarVariante(tenantId, productoId, varianteId, request);
+        return ResponseEntity.ok(updated);
+    }
+
     // ─── POST /variantes/{varianteId}/stock/sucursales/{sucursalId} ───────────
 
     /**

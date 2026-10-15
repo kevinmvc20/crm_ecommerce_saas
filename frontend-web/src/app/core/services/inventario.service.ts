@@ -13,6 +13,7 @@ import {
   ProductoUpdateRequest,
   VarianteProducto,
   VarianteAdicionalRequest,
+  VarianteUpdateRequest,
   StockSucursal,
   AjusteStockRequest,
 } from '../models/inventario.models';
@@ -150,5 +151,13 @@ export class InventarioService {
       `${BASE}/productos/variantes/${varianteId}/stock/sucursales/${sucursalId}`,
       data
     );
+  }
+
+  /**
+   * Actualiza los datos comerciales de una variante de producto existente.
+   * PUT /api/v1/admin/productos/variantes/{varianteId}
+   */
+  actualizarVariante(varianteId: string, req: VarianteUpdateRequest): Observable<VarianteProducto> {
+    return this.http.put<VarianteProducto>(`${BASE}/productos/variantes/${varianteId}`, req);
   }
 }

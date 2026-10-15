@@ -13,6 +13,7 @@ import {
   Categoria,
   Producto,
   VarianteProducto,
+  VarianteUpdateRequest,
   StockSucursal,
 } from '../../../core/models/inventario.models';
 
@@ -58,6 +59,8 @@ export class CatalogoDashboardComponent implements OnInit {
   readonly showModalSucursal  = signal(false);
   readonly isSaving           = signal(false);
   readonly saveError          = signal<string | null>(null);
+  readonly sucursalError      = signal<string | null>(null);
+  readonly categoriaError     = signal<string | null>(null);
 
   // ── Nuevos Signals para Módulo 4 ─────────────────────────────────────────────
 
@@ -79,6 +82,10 @@ export class CatalogoDashboardComponent implements OnInit {
   /** Variante seleccionada para el modal de ajuste de stock. */
   readonly varianteSeleccionada = signal<VarianteProducto | null>(null);
 
+  // ── Signals de Edición de Variante ──────────────────────────────────────────
+  readonly showEditarVarianteModal = signal<boolean>(false);
+  readonly varianteAEditar = signal<VarianteProducto | null>(null);
+
   // ── Modales de Edición Categoría/Sucursal ───────────────────────────────────
   readonly showEditarCategoriaModal = signal<boolean>(false);
   readonly categoriaSeleccionada = signal<Categoria | null>(null);
@@ -90,9 +97,16 @@ export class CatalogoDashboardComponent implements OnInit {
   readonly varianteAdicionalForm = this.fb.group({
     sku:             ['', [Validators.required, Validators.maxLength(60)]],
     nombreVariante:  ['', [Validators.required, Validators.maxLength(100)]],
-    precio:          [0, [Validators.required, Validators.min(0)]],
+    precio:          [null as number | null, [Validators.required, Validators.min(0)]],
     stockInicial:    [null as number | null],
     sucursalId:      [null as number | null],
+  });
+
+  // ── Formulario: Editar Variante ─────────────────────────────────────────────
+  readonly editarVarianteForm = this.fb.group({
+    nombreVariante: ['', [Validators.required, Validators.maxLength(100)]],
+    precio:         [null as number | null, [Validators.required, Validators.min(0)]],
+    activo:         [true, [Validators.required]],
   });
 
   // ── Formulario: Ajustar Stock ───────────────────────────────────────────────
@@ -232,7 +246,7 @@ export class CatalogoDashboardComponent implements OnInit {
 
   abrirModalVariante(prod: Producto): void {
     this.productoSeleccionado.set(prod);
-    this.varianteAdicionalForm.reset({ sku: '', nombreVariante: '', precio: 0, stockInicial: null, sucursalId: null });
+    this.varianteAdicionalForm.reset({ sku: '', nombreVariante: '', precio: null, stockInicial: null, sucursalId: null });
     this.saveError.set(null);
     this.showVarianteModal.set(true);
   }
@@ -268,7 +282,57 @@ export class CatalogoDashboardComponent implements OnInit {
         this.showVarianteModal.set(false);
       },
       error: err => {
-        this.saveError.set(err?.error?.message ?? 'Error al agregar la variante.');
+        this.saveError.set(this.extractErrorMessage(err, 'Error al procesar el producto o variante.'));
+        this.isSaving.set(false);
+      },
+    });
+  }
+
+  // ── Modal: Editar Variante ──────────────────────────────────────────────────
+
+  abrirEditarVariante(variante: VarianteProducto): void {
+    this.varianteAEditar.set(variante);
+    this.editarVarianteForm.patchValue({
+      nombreVariante: variante.nombreVariante,
+      precio:         variante.precio,
+      activo:         variante.activo,
+    });
+    this.saveError.set(null);
+    this.showEditarVarianteModal.set(true);
+  }
+
+  cerrarEditarVarianteModal(): void {
+    this.showEditarVarianteModal.set(false);
+    this.varianteAEditar.set(null);
+    this.editarVarianteForm.reset({ nombreVariante: '', precio: null, activo: true });
+  }
+
+  submitEditarVariante(): void {
+    if (this.editarVarianteForm.invalid) {
+      this.editarVarianteForm.markAllAsTouched();
+      return;
+    }
+    const variante = this.varianteAEditar();
+    if (!variante) return;
+
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    const raw = this.editarVarianteForm.getRawValue();
+    const payload: VarianteUpdateRequest = {
+      nombreVariante: raw.nombreVariante!,
+      precio:         Number(raw.precio),
+      activo:         Boolean(raw.activo),
+    };
+
+    this.svc.actualizarVariante(variante.id, payload).subscribe({
+      next: () => {
+        this.svc.getProductos().subscribe({ next: data => this.productos.set(data) });
+        this.isSaving.set(false);
+        this.cerrarEditarVarianteModal();
+      },
+      error: err => {
+        this.saveError.set(this.extractErrorMessage(err, 'Error al actualizar la variante.'));
         this.isSaving.set(false);
       },
     });
@@ -321,7 +385,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.svc.getProductos().subscribe({ next: data => this.productos.set(data) });
       },
       error: err => {
-        this.saveError.set(err?.error?.message ?? 'Error al ajustar el stock.');
+        this.saveError.set(this.extractErrorMessage(err, 'Error al ajustar el inventario.'));
         this.isSaving.set(false);
       },
     });
@@ -370,7 +434,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.showEditarProductoModal.set(false);
       },
       error: err => {
-        this.saveError.set(err?.error?.message ?? 'Error al actualizar el producto.');
+        this.saveError.set(this.extractErrorMessage(err, 'Error al actualizar el producto.'));
         this.isSaving.set(false);
       },
     });
@@ -386,7 +450,7 @@ export class CatalogoDashboardComponent implements OnInit {
         );
       },
       error: err => {
-        this.errorMsg.set(err?.error?.message ?? 'Error al cambiar el estado del producto.');
+        this.errorMsg.set(this.extractErrorMessage(err, 'Error al cambiar estado.'));
       },
     });
   }
@@ -412,6 +476,10 @@ export class CatalogoDashboardComponent implements OnInit {
   }
 
   submitProducto(): void {
+    this.guardarProducto();
+  }
+
+  guardarProducto(): void {
     if (this.productoForm.invalid) {
       this.productoForm.markAllAsTouched();
       return;
@@ -440,8 +508,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.showModalProducto.set(false);
       },
       error: (err) => {
-        const msg = err?.error?.message ?? err?.message ?? 'Error al crear el producto.';
-        this.saveError.set(msg);
+        this.saveError.set(this.extractErrorMessage(err, 'Error al procesar el producto o variante.'));
         this.isSaving.set(false);
       },
     });
@@ -451,18 +518,27 @@ export class CatalogoDashboardComponent implements OnInit {
 
   openModalCategoria(): void {
     this.categoriaForm.reset({ nombre: '', descripcion: '', categoriaPadreId: null });
+    this.categoriaError.set(null);
     this.saveError.set(null);
     this.showModalCategoria.set(true);
   }
 
-  closeModalCategoria(): void { this.showModalCategoria.set(false); }
+  closeModalCategoria(): void {
+    this.categoriaError.set(null);
+    this.showModalCategoria.set(false);
+  }
 
   submitCategoria(): void {
+    this.guardarCategoria();
+  }
+
+  guardarCategoria(): void {
     if (this.categoriaForm.invalid) {
       this.categoriaForm.markAllAsTouched();
       return;
     }
     this.isSaving.set(true);
+    this.categoriaError.set(null);
     this.saveError.set(null);
 
     const raw = this.categoriaForm.getRawValue();
@@ -478,7 +554,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.showModalCategoria.set(false);
       },
       error: (err) => {
-        this.saveError.set(err?.error?.message ?? 'Error al crear la categoría.');
+        this.categoriaError.set(this.extractErrorMessage(err, 'Error al registrar la categoría.'));
         this.isSaving.set(false);
       },
     });
@@ -525,7 +601,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.showEditarCategoriaModal.set(false);
       },
       error: (err) => {
-        this.saveError.set(err?.error?.message ?? 'Error al actualizar categoría.');
+        this.saveError.set(this.extractErrorMessage(err, 'Error al actualizar la categoría.'));
         this.isSaving.set(false);
       },
     });
@@ -537,7 +613,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.svc.getCategorias().subscribe(data => this.categorias.set(data));
       },
       error: err => {
-        this.errorMsg.set(err?.error?.message ?? 'Error al cambiar estado.');
+        this.errorMsg.set(this.extractErrorMessage(err, 'Error al cambiar estado.'));
       },
     });
   }
@@ -546,18 +622,27 @@ export class CatalogoDashboardComponent implements OnInit {
 
   openModalSucursal(): void {
     this.sucursalForm.reset({ nombre: '', direccion: '', telefono: '' });
+    this.sucursalError.set(null);
     this.saveError.set(null);
     this.showModalSucursal.set(true);
   }
 
-  closeModalSucursal(): void { this.showModalSucursal.set(false); }
+  closeModalSucursal(): void {
+    this.sucursalError.set(null);
+    this.showModalSucursal.set(false);
+  }
 
   submitSucursal(): void {
+    this.guardarSucursal();
+  }
+
+  guardarSucursal(): void {
     if (this.sucursalForm.invalid) {
       this.sucursalForm.markAllAsTouched();
       return;
     }
     this.isSaving.set(true);
+    this.sucursalError.set(null);
     this.saveError.set(null);
 
     const raw = this.sucursalForm.getRawValue();
@@ -572,7 +657,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.showModalSucursal.set(false);
       },
       error: (err) => {
-        this.saveError.set(err?.error?.message ?? 'Error al crear la sucursal.');
+        this.sucursalError.set(this.extractErrorMessage(err, 'Error al registrar la sucursal.'));
         this.isSaving.set(false);
       },
     });
@@ -619,7 +704,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.showEditarSucursalModal.set(false);
       },
       error: (err) => {
-        this.saveError.set(err?.error?.message ?? 'Error al actualizar sucursal.');
+        this.saveError.set(this.extractErrorMessage(err, 'Error al actualizar la sucursal.'));
         this.isSaving.set(false);
       },
     });
@@ -631,7 +716,7 @@ export class CatalogoDashboardComponent implements OnInit {
         this.sucursales.update(list => list.map(s => s.id === updated.id ? updated : s));
       },
       error: err => {
-        this.errorMsg.set(err?.error?.message ?? 'Error al cambiar estado.');
+        this.errorMsg.set(this.extractErrorMessage(err, 'Error al cambiar estado.'));
       },
     });
   }
@@ -640,6 +725,31 @@ export class CatalogoDashboardComponent implements OnInit {
 
   formatPrecio(n: number): string {
     return new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(n);
+  }
+
+  /**
+   * Helper para visualización de precio base dinámico.
+   * - Sin variantes: "Bs. 0,00"
+   * - Mismo precio en todas: "Bs. X,XX"
+   * - Distintos precios: "Desde Bs. X,XX" (menor precio)
+   */
+  obtenerTextoPrecio(prod: Producto): string {
+    if (!prod.variantes || prod.variantes.length === 0) {
+      return 'Bs. 0,00';
+    }
+    const precios = prod.variantes.map(v => Number(v.precio));
+    const minPrecio = Math.min(...precios);
+    const maxPrecio = Math.max(...precios);
+
+    const formateado = new Intl.NumberFormat('es-BO', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(minPrecio);
+
+    if (minPrecio === maxPrecio) {
+      return `Bs. ${formateado}`;
+    }
+    return `Desde Bs. ${formateado}`;
   }
 
   trackById(_: number, item: { id: string | number }): string | number {
@@ -727,7 +837,7 @@ export class CatalogoDashboardComponent implements OnInit {
     return this.fb.group({
       sku:              ['', [Validators.required, Validators.maxLength(60)]],
       nombreVariante:   ['', [Validators.required, Validators.maxLength(100)]],
-      precio:           [0, [Validators.required, Validators.min(0)]],
+      precio:           [null as number | null, [Validators.required, Validators.min(0)]],
       stockInicial:     [null as number | null],
       sucursalIdInicial:[null as number | null],
     });
@@ -741,5 +851,9 @@ export class CatalogoDashboardComponent implements OnInit {
       ...parent,
       subcategorias: (parent.subcategorias ?? []).map(s => this.insertSubcategoria(s, child)),
     };
+  }
+
+  private extractErrorMessage(err: any, defaultMsg: string): string {
+    return err?.error?.detail || err?.error?.message || defaultMsg;
   }
 }

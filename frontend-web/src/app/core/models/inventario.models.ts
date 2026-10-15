@@ -109,6 +109,16 @@ export interface VarianteAdicionalRequest {
   sucursalId?: number;
 }
 
+/**
+ * Payload para PUT /api/v1/admin/productos/variantes/{varianteId}.
+ * Actualiza los datos comerciales de una variante existente.
+ */
+export interface VarianteUpdateRequest {
+  nombreVariante: string;
+  precio: number;
+  activo: boolean;
+}
+
 // ─── Producto ─────────────────────────────────────────────────────────────────
 
 /**
