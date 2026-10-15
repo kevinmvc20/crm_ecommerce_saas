@@ -206,12 +206,8 @@
             </td>
 
             <!-- Precio base -->
-            <td class="px-3 py-4 text-sm font-medium text-slate-700">
-              @if (p.variantes.length > 0) {
-                {{ formatPrecio(p.variantes[0].precio) }}
-              } @else {
-                <span class="text-slate-400">—</span>
-              }
+            <td class="px-3 py-4 text-sm font-medium text-slate-700 whitespace-nowrap">
+              {{ obtenerTextoPrecio(p) }}
             </td>
 
             <!-- Stock total -->
@@ -367,18 +363,31 @@
                         <span class="text-xs text-slate-400 italic">Sin registros de stock</span>
                         }
                       </td>
-                      <!-- Acción ajustar stock -->
-                      <td class="px-3 py-3 text-right">
-                        <button type="button"
-                          class="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 shadow-sm transition-colors hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
-                          [attr.id]="'btn-stock-' + v.id"
-                          [attr.aria-label]="'Ajustar stock de variante ' + v.nombreVariante"
-                          (click)="abrirModalAjusteStock(p, v)">
-                          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-                          </svg>
-                          Ajustar Stock
-                        </button>
+                      <!-- Acción: Editar y Ajustar Stock -->
+                      <td class="px-3 py-3 text-right whitespace-nowrap">
+                        <div class="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            (click)="abrirEditarVariante(v)"
+                            [attr.id]="'btn-editar-var-' + v.id"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                          >
+                            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                            Editar
+                          </button>
+                          <button type="button"
+                            class="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 shadow-sm transition-colors hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                            [attr.id]="'btn-stock-' + v.id"
+                            [attr.aria-label]="'Ajustar stock de variante ' + v.nombreVariante"
+                            (click)="abrirModalAjusteStock(p, v)">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                            </svg>
+                            Ajustar Stock
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     }
@@ -557,10 +566,10 @@
 @if (showModalProducto()) {
 <div id="modal-producto" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
   role="dialog" aria-modal="true" aria-labelledby="modal-producto-title">
-  <div class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
+  <div class="w-full max-w-2xl max-h-[85vh] flex flex-col bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
 
     <!-- Cabecera modal (sticky) -->
-    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4 rounded-t-2xl">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
       <div>
         <h2 id="modal-producto-title" class="text-base font-bold text-slate-800">Nuevo Producto</h2>
         <p class="text-xs text-slate-500">Completa los datos del producto y al menos una variante.</p>
@@ -574,11 +583,13 @@
     </div>
 
     <!-- Formulario (cuerpo scrollable) -->
-    <form id="form-nuevo-producto" [formGroup]="productoForm" (ngSubmit)="submitProducto()" class="overflow-y-auto flex-1 px-6 py-4 pr-3 space-y-5" novalidate>
+    <form id="form-nuevo-producto" [formGroup]="productoForm" (ngSubmit)="submitProducto()" class="flex-1 overflow-y-auto px-6 py-4 space-y-4" novalidate>
 
       <!-- Error de guardado -->
       @if (saveError()) {
-      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ saveError() }}
+      </div>
       }
 
       <!-- Nombre -->
@@ -633,15 +644,16 @@
             class="rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition-colors hover:border-slate-300">
             <div class="mb-3 flex items-center justify-between">
               <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Variante #{{ $index + 1 }}</p>
-              @if (variantesArray.length > 1) {
               <button type="button"
                 class="rounded-md p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                [disabled]="variantesArray.length <= 1"
+                [class.opacity-30]="variantesArray.length <= 1"
+                [class.cursor-not-allowed]="variantesArray.length <= 1"
                 (click)="removeVariante($index)" [attr.aria-label]="'Eliminar variante ' + ($index + 1)">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                 </svg>
               </button>
-              }
             </div>
 
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -662,8 +674,20 @@
               <!-- Precio -->
               <div>
                 <label [for]="'v-precio-' + $index" class="mb-1 block text-xs font-medium text-slate-600">Precio <span class="text-red-500">*</span></label>
-                <input [id]="'v-precio-' + $index" type="number" formControlName="precio" min="0" step="0.01" placeholder="0.00"
-                  class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors" />
+                <div class="relative rounded-lg shadow-sm">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <span class="text-xs font-semibold text-slate-500">Bs.</span>
+                  </div>
+                  <input
+                    [id]="'v-precio-' + $index"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    class="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    formControlName="precio"
+                  />
+                </div>
               </div>
               <!-- Stock inicial -->
               <div>
@@ -702,7 +726,7 @@
     </form>
 
     <!-- Pie del modal (sticky) -->
-    <div class="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 rounded-b-2xl">
+    <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
       <button type="button"
         class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
         (click)="closeModalProducto()" [disabled]="isSaving()">
@@ -757,7 +781,9 @@
       class="overflow-y-auto flex-1 px-6 py-5 space-y-5" novalidate>
 
       @if (saveError()) {
-      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ saveError() }}
+      </div>
       }
 
       <!-- Nombre -->
@@ -847,7 +873,9 @@
       class="overflow-y-auto flex-1 px-6 py-5 space-y-4" novalidate>
 
       @if (saveError()) {
-      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ saveError() }}
+      </div>
       }
 
       <!-- Información adicional -->
@@ -877,8 +905,20 @@
       <!-- Precio -->
       <div>
         <label for="var-precio" class="block text-sm font-medium text-slate-700 mb-1.5">Precio <span class="text-red-500">*</span></label>
-        <input id="var-precio" type="number" formControlName="precio" min="0" step="0.01" placeholder="0.00"
-          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors" />
+        <div class="relative rounded-lg shadow-sm">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <span class="text-xs font-semibold text-slate-500">Bs.</span>
+          </div>
+          <input
+            id="var-precio"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            class="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            formControlName="precio"
+          />
+        </div>
       </div>
 
       <!-- Stock inicial + Sucursal -->
@@ -926,6 +966,147 @@
 
 
 <!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║              MODAL: EDITAR VARIANTE                              ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+@if (showEditarVarianteModal()) {
+<div id="modal-editar-variante" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+  role="dialog" aria-modal="true" aria-labelledby="modal-editar-var-title">
+  <div class="w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl bg-white shadow-xl overflow-hidden border border-slate-100">
+
+    <!-- Cabecera -->
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+      <div>
+        <h2 id="modal-editar-var-title" class="text-base font-bold text-slate-800">Editar Variante</h2>
+        <p class="text-xs text-slate-500">
+          Actualiza los datos comerciales de la variante.
+        </p>
+      </div>
+      <button type="button" class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+        (click)="cerrarEditarVarianteModal()" aria-label="Cerrar modal editar variante">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo -->
+    <form id="form-editar-variante" [formGroup]="editarVarianteForm" (ngSubmit)="submitEditarVariante()"
+      class="flex-1 overflow-y-auto px-6 py-4 space-y-4" novalidate>
+
+      @if (saveError()) {
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ saveError() }}
+      </div>
+      }
+
+      <!-- SKU (Inmutable / Readonly) -->
+      <div>
+        <label for="edit-var-sku" class="block text-sm font-medium text-slate-700 mb-1.5">
+          SKU <span class="text-xs font-normal text-slate-400">(Inmutable)</span>
+        </label>
+        <input
+          id="edit-var-sku"
+          type="text"
+          [value]="varianteAEditar()?.sku"
+          readonly
+          class="block w-full rounded-lg border border-slate-200 bg-slate-100 px-3.5 py-2 text-sm font-mono text-slate-500 cursor-not-allowed select-all focus:outline-none"
+        />
+        <p class="mt-1 text-xs text-slate-400">El código SKU preserva el histórico de trazabilidad e inventario.</p>
+      </div>
+
+      <!-- Nombre variante -->
+      <div>
+        <label for="edit-var-nombre" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Nombre de variante <span class="text-red-500">*</span>
+        </label>
+        <input
+          id="edit-var-nombre"
+          type="text"
+          formControlName="nombreVariante"
+          placeholder="Ej. Talla L / Color Azul"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+          [class.border-red-400]="editarVarianteForm.get('nombreVariante')?.invalid && editarVarianteForm.get('nombreVariante')?.touched"
+        />
+        @if (editarVarianteForm.get('nombreVariante')?.invalid && editarVarianteForm.get('nombreVariante')?.touched) {
+        <p class="mt-1 text-xs text-red-600">El nombre es obligatorio (máx. 100 caracteres).</p>
+        }
+      </div>
+
+      <!-- Precio con adornment -->
+      <div>
+        <label for="edit-var-precio" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Precio de venta <span class="text-red-500">*</span>
+        </label>
+        <div class="relative rounded-lg shadow-sm">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <span class="text-xs font-semibold text-slate-500">Bs.</span>
+          </div>
+          <input
+            id="edit-var-precio"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            class="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            formControlName="precio"
+          />
+        </div>
+        @if (editarVarianteForm.get('precio')?.invalid && editarVarianteForm.get('precio')?.touched) {
+        <p class="mt-1 text-xs text-red-600">El precio debe ser un número mayor o igual a 0.</p>
+        }
+      </div>
+
+      <!-- Estado Activo (Checkbox/Switch) -->
+      <div class="pt-2">
+        <label class="flex items-center gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            formControlName="activo"
+            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span class="text-sm font-medium text-slate-700">Variante activa para venta</span>
+        </label>
+        <p class="mt-1 pl-7 text-xs text-slate-400">
+          Si se desactiva, la variante no estará disponible para facturación ni catálogo público.
+        </p>
+      </div>
+
+    </form>
+
+    <!-- Footer sticky -->
+    <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+      <button
+        type="button"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+        (click)="cerrarEditarVarianteModal()"
+        [disabled]="isSaving()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        form="form-editar-variante"
+        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        [disabled]="isSaving() || editarVarianteForm.invalid"
+      >
+        @if (isSaving()) {
+        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Guardando…
+        } @else {
+        Guardar Cambios
+        }
+      </button>
+    </div>
+
+  </div>
+</div>
+}
+
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
      ║              MODAL: AJUSTAR STOCK                                ║
      ╚══════════════════════════════════════════════════════════════════╝ -->
 @if (showAjusteStockModal()) {
@@ -956,7 +1137,9 @@
       class="overflow-y-auto flex-1 px-6 py-5 space-y-4" novalidate>
 
       @if (saveError()) {
-      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ saveError() }}
+      </div>
       }
 
       <!-- Nota informativa -->
@@ -1049,8 +1232,10 @@
 
     <form id="form-nueva-categoria" [formGroup]="categoriaForm" (ngSubmit)="submitCategoria()" class="px-6 py-5 space-y-4" novalidate>
 
-      @if (saveError()) {
-      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      @if (categoriaError()) {
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ categoriaError() }}
+      </div>
       }
 
       <div>
@@ -1123,8 +1308,10 @@
 
     <form id="form-nueva-sucursal" [formGroup]="sucursalForm" (ngSubmit)="submitSucursal()" class="px-6 py-5 space-y-4" novalidate>
 
-      @if (saveError()) {
-      <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ saveError() }}</div>
+      @if (sucursalError()) {
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ sucursalError() }}
+      </div>
       }
 
       <div>
@@ -1183,6 +1370,11 @@
       </button>
     </div>
     <form [formGroup]="editarCategoriaForm" (ngSubmit)="guardarEdicionCategoria()" class="px-6 py-5 space-y-4">
+      @if (saveError()) {
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ saveError() }}
+      </div>
+      }
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre <span class="text-red-500">*</span></label>
         <input type="text" formControlName="nombre" class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
@@ -1222,6 +1414,11 @@
       </button>
     </div>
     <form [formGroup]="editarSucursalForm" (ngSubmit)="guardarEdicionSucursal()" class="px-6 py-5 space-y-4">
+      @if (saveError()) {
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        {{ saveError() }}
+      </div>
+      }
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre <span class="text-red-500">*</span></label>
         <input type="text" formControlName="nombre" class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
